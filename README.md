@@ -17,7 +17,7 @@
 #### sqrt.asm
 - Low Precision Square Root calculator
 - Uses Newton-Raphson method to approximate the root of following function:
-- <img src="https://latex.codecogs.com/gif.latex?f(x)=\text {  x\textsuperscript{2} - \textit{input} }" />
+- $f(x)=  x^2 - input$
 - Basic I/O with emu8086 screen
     - Input value
     - Display result
