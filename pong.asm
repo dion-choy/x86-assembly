@@ -14,7 +14,7 @@ oldBallPos dw 0         ; old pos of ball (to remove)
 ballVeloRow db 00h      ; horizontal velocity of ball
 ballVeloCol db 00h      ; veritcal velocity of ball
 
-resetFlag dw 0
+resetFlag db 0
 
 rightUp equ 48h         ; BIOS scan for up key
 rightDown equ 50h       ; BIOS scan for down key
