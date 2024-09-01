@@ -3,11 +3,11 @@
 [Documentation for EMU8086](https://yassinebridi.github.io/asm-docs/) \
 &nbsp; 
 ## Programs Made
-- [matrixMult.asm](#<matrixmultasm>)
-- [sqrt.asm](#<sqrtasm>)
-- [snakeGame.asm](#<snakegameasm>)
-- [ticTacToe.asm](#<tictactoeasm>)
-- [pong.asm](#<pongasm>)
+- [matrixMult.asm](#matrixmultasm)
+- [sqrt.asm](#sqrtasm)
+- [snakeGame.asm](#snakegameasm)
+- [ticTacToe.asm](#tictactoeasm)
+- [pong.asm](#pongasm)
 
 ## Brief Overview
 #### matrixMult.asm
