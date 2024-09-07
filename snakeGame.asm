@@ -1,62 +1,75 @@
 
-org 100h  
+org 100h
 
-jmp start 
-    
-left    equ     4bh
-right   equ     4dh
-up      equ     48h
-down    equ     50h
+jmp start
+
+left equ 4bh
+right equ 4dh
+up equ 48h
+down equ 50h
 
 start1 db "Welcome to Snake!", 0Dh, 0Ah
 db "Press ESC to exit at any time", 0Dh, 0Ah 
 db "Press any key to start", 0Dh, 0Ah, "$"
   
-length db 3   
-direction db right    
-tail dw 100 dup (0FFFFh)   
+length db 3
+direction db right
+tail dw 100 dup (0FFFFh)
 exitFlag db 0 
-     
+
 loss1 db "You Lost!", 0Dh, 0Ah
 db "Your Score: "
 loss2 db 0, 0, 0, 0Dh, 0Ah
-db "Press ENTER to restart", 0Dh, 0Ah 
+db "Press ENTER to restart", 0Dh, 0Ah
 db "Press any key to exit...", 0Dh, 0Ah, "$"
 
-start:  
-mov cx, 0 
+start:
+mov cx, 0
 
-mov ah, 0   
+mov ah, 0
 mov al, 0
 int 10h
 
 lea dx, start1
 mov ah, 9
-int 21h   
+int 21h
 
 mov ah, 0
 int 16h
-         
-mov ah, 0   
+ 
+mov ah, 0 
 mov al, 0
 int 10h
-            
+
 mov dx, 0 
 
 call drawApple
 
-snakeLoop: 
-                   
-call eraseSnake         ; erase tail
+snakeLoop:
+
 call detectInput        ; get direction
+call eraseSnake         ; erase tail
 call drawSnake          ; draw head
 call movCursor          ; mov cursor forward
 call checkCollision     ; check hit itself/out of bounds
 
 cmp exitFlag, 1         ; check if exit condition
 je exit
-ja quit 
+ja quit
+ 
+;call delay             ; 500ms delay function(commented for slow emu speed) 
+
 jmp snakeLoop           ; loop
+
+delay proc
+    push dx
+    mov ah, 86h
+    mov cx, 7h
+    mov dx, 0A120h
+    int 15h
+    pop dx
+    ret
+delay endp
 
 drawSnake proc 
     push ax
@@ -71,7 +84,7 @@ drawSnake proc
     
     pop cx
     pop bx
-    pop ax     
+    pop ax
     ret
 drawSnake endp 
 
@@ -84,37 +97,37 @@ detectInput proc
     cmp al, 1Bh         ; check if esc pressed
     jne noExit 
     mov exitFlag, 2
-    noExit:   
+    noExit:
     
     cmp ah, 1           ; if key not pressed
     je noKeyPress       ; do not clear buffer
-                                          
-    cmp ah, up          ; else: 
-    je validInput                         
+
+    cmp ah, up          ; else:
+    je validInput
     cmp ah, down
-    je validInput                        
+    je validInput
     cmp ah, left
-    je validInput                        
+    je validInput
     cmp ah, right
     je validInput
     jmp invalidInput
     
-    validInput:         ; if direction input, write                              
+    validInput:         ; if direction input, write
     mov direction, ah 
     
-    invalidInput:    
-                  
-    mov ah, 0        
-    int 16h         
+    invalidInput:
+    
+    mov ah, 0
+    int 16h
     
     noKeyPress:
     
     pop ax
-    ret    
+    ret
 detectInput endp
 
-movCursor proc 
-    push ax    
+movCursor proc
+    push ax
     push bx
     
     mov ah, direction
@@ -133,7 +146,7 @@ movCursor proc
     inc dl
     jmp endMov
     
-    movL:  
+    movL:
     dec dl
     jmp endMov
     
@@ -141,7 +154,7 @@ movCursor proc
     dec dh
     jmp endMov
     
-    movD:  
+    movD:
     inc dh
     jmp endMov
     
@@ -157,8 +170,8 @@ movCursor endp
 
 eraseSnake proc 
     push ax
-    push dx 
-    push cx 
+    push dx
+    push cx
     
     mov al, length      ; due to word storage,
     shl al, 1           ; multiply length by 2
@@ -179,8 +192,8 @@ eraseSnake proc
     push bx 
     
     mov al, ' '
-    mov ah, 09h  
-    mov bl, 0111b 
+    mov ah, 09h
+    mov bl, 0111b
     mov cx, 1               ; call interrupt, erase tail
     int 10h
     
@@ -195,19 +208,19 @@ eraseSnake proc
     add bl, 2           ; increment index
     
     pop cx
-    pop dx    
+    pop dx
     mov ah, 2
-    int 10h  
+    int 10h
     
     pop ax 
     ret
 eraseSnake endp
 
-checkCollision proc 
-    push ax 
-    push dx 
+checkCollision proc
+    push ax
+    push dx
     
-    mov ah, 8  
+    mov ah, 8
     int 10h             ; call interrupt, check current char
     
     cmp al, "*"         ; if hit snake body, lose
@@ -221,28 +234,28 @@ checkCollision proc
     jmp checkApple
      
     collision:          ; set exit flag HIGh
-    mov exitFlag, 1     
+    mov exitFlag, 1
     jmp exitCheckCollision
        
     checkApple:
     cmp al, "@"         ; if apple eaten,
     jne exitCheckCollision
-    inc length          ; increase length    
+    inc length          ; increase length
     call drawApple      ; draw new apple
     
     exitCheckCollision:
-    pop dx  
+    pop dx
     mov ah, 2
     int 10h
       
-    pop ax 
+    pop ax
     ret
 checkCollision endp
 
 drawApple proc
-    push ax 
+    push ax
     push dx
-    push cx 
+    push cx
     push bx
     
     rerollCoord:        ; basic pseudorandom generator
@@ -264,7 +277,7 @@ drawApple proc
     mov ah, 2
     int 10h             ; interrupt to move cursor
     
-    mov ah, 8  
+    mov ah, 8
     int 10h 
     cmp al, "*"         ; check not snake body
     je rerollCoord
@@ -278,7 +291,7 @@ drawApple proc
     
     pop bx
     pop cx
-    pop dx  
+    pop dx
     mov ah, 2
     int 10h
       
@@ -289,17 +302,17 @@ drawApple endp
 restart:
 
 mov length, 3           ; reset data
-mov direction, right  
-mov exitFlag, 0    
+mov direction, right
+mov exitFlag, 0
 
 mov cx, 100 
-lea di, tail    
+lea di, tail
 clearMemory:
 mov [di], 0FFFFh
 add di, 2
 loop clearMemory 
 
-mov ah, 0   
+mov ah, 0
 mov al, 0
 int 10h
 
@@ -311,28 +324,28 @@ mov al, 0
 int 10h
 
 mov al, length
-sub al, 3    
+sub al, 3
 
 mov bl, 100
-div bl  
+div bl
    
 add al, "0"             ; express in dec
-mov loss2[0], al  
+mov loss2[0], al
 
 mov al, ah
 mov ah, 0
 mov bl, 10
-div bl    
-           
+div bl
+
 add al, "0"
 add ah, "0"
 
 mov loss2[1], al
-mov loss2[2], ah    
+mov loss2[2], ah
 
 lea dx, loss1
 mov ah, 9
-int 21h 
+int 21h
 
 mov ah, 0
 int 16h
