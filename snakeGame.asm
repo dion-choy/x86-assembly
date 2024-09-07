@@ -47,17 +47,16 @@ call drawApple
 
 snakeLoop:
 
-call detectInput        ; get direction
 call eraseSnake         ; erase tail
 call drawSnake          ; draw head
-call movCursor          ; mov cursor forward
-call checkCollision     ; check hit itself/out of bounds
+ 
+;call delay             ; 500ms delay function(commented for slow emu speed)
 
+call detectInput        ; get direction
+call movCursor          ; mov cursor forwardcall checkCollision     ; check hit itself/out of bounds
 cmp exitFlag, 1         ; check if exit condition
 je exit
 ja quit
- 
-;call delay             ; 500ms delay function(commented for slow emu speed) 
 
 jmp snakeLoop           ; loop
 
@@ -103,13 +102,33 @@ detectInput proc
     je noKeyPress       ; do not clear buffer
 
     cmp ah, up          ; else:
-    je validInput
+    je upInput
     cmp ah, down
-    je validInput
+    je downInput
     cmp ah, left
-    je validInput
+    je leftInput
     cmp ah, right
-    je validInput
+    je rightInput
+    jmp invalidInput
+    
+    upInput:
+    cmp direction, down
+    jne validInput
+    jmp invalidInput
+    
+    downInput:
+    cmp direction, up
+    jne validInput
+    jmp invalidInput
+    
+    leftInput:
+    cmp direction, right
+    jne validInput
+    jmp invalidInput
+    
+    rightInput:
+    cmp direction, left
+    jne validInput
     jmp invalidInput
     
     validInput:         ; if direction input, write
