@@ -96,10 +96,23 @@ pop cx                  ; remove stack
 inputFinished:
 call moveBall           
 
+;call delay     ; delay 500ms (commented due to slow emu)
+
 cmp resetFlag, 1
 je resetBall
  
 jmp again
+
+
+delay proc
+    push dx
+    mov ah, 86h
+    mov cx, 7h
+    mov dx, 0A120h
+    int 15h
+    pop dx
+    ret
+delay endp
 
 resetBall:
 mov ballVeloRow, 3      ; reset velocity
@@ -215,35 +228,35 @@ leftRightColl proc          ; Side collision detection
     sub bl, 4Fh
     cmp bh, bl              ; determine which side was hit
     jb closerToLeft
-    ; if closer to right 
-    mov dl, 4Eh
-    lea bx, rightPos
+                        ; if closer to right
+    mov dl, 4Eh         ; load col of paddle
+    lea bx, rightPos    ; load pointer
     jmp closerDetermined
     
     closerToLeft:       ; if closer to left
     
-    mov dl, 1
-    lea bx, leftPos
+    mov dl, 1           ; load col of paddle
+    lea bx, leftPos     ; load pointer
     
     closerDetermined:
     cmp [bx], dh              ; determine if paddle hit
     ja noHit
     
-    mov cl, [bx] 
+    mov cl, [bx]        ; if within top and bottom, hit
     add cl, 4
     cmp cl, dh
     jb noHit
     
-    sub cl, 2
+    sub cl, 2           ; when hit, flip horizontal velo
     push dx
     sub dh, cl
-    add ballVeloCol, dh
+    add ballVeloCol, dh ; change vertical velo from location hit
     pop dx
     
     jmp hit
     
-    noHit:
-    inc [bx]1
+    noHit:              ; winFlag for opp on next byte
+    inc [bx]1           ; can inc next byte for convenience
     inc resetFlag
     
     hit:
@@ -254,7 +267,7 @@ leftRightColl proc          ; Side collision detection
 leftRightColl endp
 
 topBottomColl proc          ; Top & bottom collision detection
-    neg ballVeloCol
+    neg ballVeloCol         ; flip veritcal velocity
     add dh, ballVeloCol
     ret
 topBottomColl endp
@@ -391,5 +404,5 @@ mov ah, 0
 int 16h
 
 escape:     ; return if escape pressed
-pop ax
+pop ax      ; pop so stack clear for ret
 ret
