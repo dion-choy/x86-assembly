@@ -53,7 +53,8 @@ call drawSnake          ; draw head
 ;call delay             ; 500ms delay function(commented for slow emu speed)
 
 call detectInput        ; get direction
-call movCursor          ; mov cursor forwardcall checkCollision     ; check hit itself/out of bounds
+call movCursor          ; mov cursor forward
+call checkCollision     ; check hit itself/out of bounds
 cmp exitFlag, 1         ; check if exit condition
 je exit
 ja quit
