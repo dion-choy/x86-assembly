@@ -36,6 +36,8 @@
     -   Draw snake and apples
 -   Collision detection
     -   Uses list as queue by looping a pointer through
+-   Pseudo-random number generator
+    -   Uses system time to generate coordinates for apple
 
 #### ticTacToe.asm
 

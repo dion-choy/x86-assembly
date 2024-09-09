@@ -96,7 +96,7 @@ pop cx                  ; remove stack
 inputFinished:
 call moveBall           
 
-;call delay     ; delay 500ms (commented due to slow emu)
+call delay     ; delay 500ms (commented due to slow emu)
 
 cmp resetFlag, 1
 je resetBall
@@ -107,8 +107,8 @@ jmp again
 delay proc
     push dx
     mov ah, 86h
-    mov cx, 7h
-    mov dx, 0A120h
+    mov cx, 1h
+    mov dx, 86D2h
     int 15h
     pop dx
     ret
@@ -306,7 +306,8 @@ drawPaddle proc         ; draw paddle moving up/down
     mov ah, 2
     int 10h
     
-    mov bl, 0FFh
+    mov al, 0h          ; No character
+    mov bl, 0FFh        ; White color
     mov cx, 1
     mov ah, 9
     int 10h

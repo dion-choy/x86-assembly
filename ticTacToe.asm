@@ -15,11 +15,12 @@ enter:
 
 mov ah, 0
 int 10h
-     
-mov ax, 1
-int 33h  
+       
+mov ch, 32
+mov ah, 1
+int 10h  
 
-drawGrid:
+drawGrid:           ; draw tic tac toe grid
 mov dl, 0
 mov dh, 8
 
@@ -56,39 +57,42 @@ call drawCol
 mov dl, 27
 mov dh, 0 
 mov cx, 25 
-call drawCol 
+call drawCol
+
+mov ax, 1
+int 33h 
   
-again:
+again:          ; run loop to detect if button input
 mov ax, 3
 int 33h 
 
 cmp bl, 1 
-je btnClick
+je btnClick     ; if input, draw player symbol
 jmp again
           
 btnClick:
-call findGrid   
+call findGrid   ; find which box was ticked
 mov ax, 0
 call checkFilled
 cmp ax, 1
 je again 
 
-cmp player, 0
+cmp player, 0   ; find player
 je playerO
 jmp playerX
 
-checkWin:
+checkWin:       ; check if winner
 mov ax, 0 
 
-call rowWin             
+call rowWin     ; check row        
 cmp ax, 1
 je exit:
 
-call colWin 
+call colWin     ; check column
 cmp ax, 1
 je exit:
 
-call diagWin
+call diagWin    ; check diagonals
 cmp ax, 1
 je exit:
 
@@ -98,7 +102,7 @@ je tieExit:
 
 jmp again 
 
-rowWin proc
+rowWin proc         ; loop through 3 rows
     push bx
     
     mov bx, 0
@@ -130,7 +134,7 @@ rowWin proc
     ret
 rowWin endp
 
-colWin proc
+colWin proc     ; loop through 3 columns
     push bx
     
     mov bx, 0
@@ -163,7 +167,7 @@ colWin proc
     ret
 colWin endp  
 
-diagWin proc 
+diagWin proc        ; manually check both diagonals
     push bx
     
     mov bx, 4
@@ -201,9 +205,9 @@ diagWin proc
     pop bx
          
     ret
-diagWin endp    
- 
-checkTie proc
+diagWin endp
+
+checkTie proc       ; if grid fully filled, tie
     push bx
     mov bx, 9
     
@@ -222,20 +226,20 @@ checkTie proc
 checkTie endp    
 
 
-playerO:
+playerO:            ; input O in grid
 call loadIndex
 mov grid[bx], 1
      
-call drawO
+call drawO          ; draw O symbol
 
 mov player, 1
 jmp checkWin
          
-playerX:      
+playerX:            ; input X in grid
 call loadIndex
 mov grid[bx], 2
 
-call drawX
+call drawX          ; draw X symbol
 
 mov player, 0
 jmp checkWin 
@@ -454,19 +458,19 @@ findGrid proc
     push ax
     
     ; find col
-    mov ax, cx
-    mov cl, 8
+    mov ax, cx      ; cx, dx in subpixels
+    mov cl, 8       ; hence div by 8
     div cl
     
     cmp al, 13
-    ja notCol1    
+    ja notCol1      ; check if above col1
     mov col, 0       
     jmp findColEnd 
     
     notCol1:
-    cmp al, 27
+    cmp al, 27      ; check if above col3
     ja col3    
-    mov col, 1       
+    mov col, 1      ; if none of above, col2 
     jmp findColEnd
     
     col3: 
@@ -475,7 +479,7 @@ findGrid proc
     findColEnd:
     
     ; find row
-    mov ax, dx
+    mov ax, dx      ; similar process as columns
     mov cl, 8
     div cl
     

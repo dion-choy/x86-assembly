@@ -41,16 +41,21 @@ mov ah, 0
 mov al, 0
 int 10h
 
+mov ch, 32
+mov ah, 1
+int 10h
+
 mov dx, 0 
 
 call drawApple
 
 snakeLoop:
+mov exitFlag, 0
 
 call eraseSnake         ; erase tail
 call drawSnake          ; draw head
  
-;call delay             ; 500ms delay function(commented for slow emu speed)
+call delay              ; 150ms delay function(commented for slow emu speed)
 
 call detectInput        ; get direction
 call movCursor          ; mov cursor forward
@@ -64,8 +69,8 @@ jmp snakeLoop           ; loop
 delay proc
     push dx
     mov ah, 86h
-    mov cx, 7h
-    mov dx, 0A120h
+    mov cx, 1h
+    mov dx, 86D2h
     int 15h
     pop dx
     ret
