@@ -67,7 +67,6 @@ _Program_
 
 -   Loops through rows and columns to check for 3 in a row
 -   Manually checks diagonals
--   Check win condition
 
 #### pong.asm
 
@@ -93,8 +92,6 @@ _Program_
 -   Collision detection
 
     -   Compare height of ball with height of paddles
-
--   Check win and lose condition
 
 #### minesweeper.asm
 
@@ -130,4 +127,3 @@ _Program_
 
     -   Tile copied from secondary to main page
     -   Counter of number of dug blocks incremented
-    -   Check win and lose condition
