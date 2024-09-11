@@ -30,7 +30,7 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/) \
     -   Input value
     -   Display result
 
-_Program_
+    **_Program_**
 
 -   Uses Newton-Raphson method to approximate the root of following function, $f(x)=  x^2 - input$
 
@@ -38,10 +38,11 @@ _Program_
 
 -   Snake Game
 -   I/O
+
     -   Input directions
     -   Draw snake and apples
 
-_Program_
+    **_Program_**
 
 -   Drawng snake
 
@@ -63,7 +64,7 @@ _Program_
 
     -   Either player obtains 3 in a row
 
-_Program_
+    **_Program_**
 
 -   Loops through rows and columns to check for 3 in a row
 -   Manually checks diagonals
@@ -80,7 +81,7 @@ _Program_
     -   Player wins 10 point
     -   Opponent loses by default
 
-_Program_
+    **_Program_**
 
 -   Basic physics
 
@@ -111,7 +112,7 @@ _Program_
 
     -   Digging on a mine tile
 
-_Program_
+    **_Program_**
 
 -   Pseudo-random number generator
 
