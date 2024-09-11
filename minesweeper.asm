@@ -3,14 +3,14 @@ org 100h
 
 jmp drawField
 
-mineChar equ 162
-flagChar equ 16
-emptyChar equ 176
+mineChar equ 162    ; ASCII for mine
+flagChar equ 16     ; ASCII for flag
+emptyChar equ 176   ; ASCII for shaded block
 display equ 0   ; main page
-minefield equ 1 ; minefield page
-numOfBombs equ 50   ; <===== num of mines
+minefield equ 1 ; minefield (hidden) page
+numOfBombs equ 99   ; <========= NUM OF MINES
 numOfRevealed dw 0
-pRNG db 0
+pRNG db 0           ; store next num
 
 winMessage db "You WIN!!", 0Dh, 0Ah, "$"
 loseMessage db "You Lose", 0Dh, 0Ah, "$"             
@@ -22,7 +22,7 @@ int 10h
 
 mov dh, 3
 mov dl, 25     
-mov bh, minefield     ; <=======change back to page 1 to hide
+mov bh, minefield     ; write to hidden page
 mov bl, 77h
 mov cx, 16
 mov al, '0'
@@ -67,7 +67,7 @@ mov bl, ah          ; modulus so col is 0-30
 add bl, 25 
 
 mov dx, bx  
-mov bh, minefield     ; <=======change back to page 1 to hide
+mov bh, minefield
 mov ah, 2
 int 10h             ; interrupt to move cursor
 
@@ -104,7 +104,7 @@ call drawBorder
 
 mov dh, 3
 mov dl, 25     
-mov bh, display     ; <=======change back to page 1 to hide
+mov bh, display     ; write to display
 mov bl, 70h
 mov cx, 16
 mov al, emptyChar
@@ -114,8 +114,8 @@ jmp allowInput
 
 ; SETUP PROCEDURES
 fillWithChar proc
-    fillWithCharLoop:      ; draw vertical sides
-    push cx
+    fillWithCharLoop:      ; fill out field with
+    push cx                ; char at AL
     
     inc dh
     mov ah, 2
@@ -136,7 +136,7 @@ drawBorder proc     ; draw minefield
     mov ah, 2
     int 10h  
     
-    mov ah, 0Ah
+    mov ah, 0Ah     ; draw top border
     mov al, "#"
     mov cx, 32
     int 10h
@@ -172,24 +172,24 @@ drawBorder proc     ; draw minefield
     mov ah, 2
     int 10h  
     
-    mov ah, 0Ah
+    mov ah, 0Ah     ; draw bottom border
     mov al, "#"
     mov cx, 32
     int 10h
     ret
 drawBorder endp
 
-incSides proc
-    mov cl, mineChar
+incSides proc               ; when mine spawns
+    mov cl, mineChar        ; increment all tiles around it
     
     dec dh
     dec dl
-    call check
-    je noNWBomb
+    call check          ; check if tile is mine
+    je noNWBomb         ; if yes skip inc
     call incTiles
-    
-    noNWBomb:
-    inc dl
+                        ; same...
+    noNWBomb:           ; for...
+    inc dl              ; remaining...
     call check
     je noNBomb
     call incTiles
@@ -235,19 +235,19 @@ incSides proc
     ret
 incSides endp
 
-incTiles proc
-    push cx
+incTiles proc       ; procedure to increment tile
+    push cx         ; and write colour
     inc al
     and ah, 0F0h
     
-    cmp al, '1'
-    jne above1
+    cmp al, '1'     ; check if number
+    jne above1      ; if not then skip
     or ah, 09h
-    jmp colourEnd
+    jmp colourEnd   ; jmp to end
     
-    above1:
-    cmp al, '2'
-    jne above2
+    above1:         ; same...
+    cmp al, '2'     ; for...
+    jne above2      ; remaining...
     or ah, 02h
     jmp colourEnd
     
@@ -309,43 +309,44 @@ incTiles endp
 
 allowInput:     ; start user input
 mov ch, 6
-mov cl, 7
+mov cl, 7       ; set underline cursor shape
 mov ah, 1
 int 10h
 
-mov ax, 0
-int 33h
+mov ax, 0       ; set mouse input but hide cursor because
+int 33h         ; MS DOS block cursor shape doesn't write 
+                ; char properly
 
-again:          ; GAMEPLAY LOOP
+again:          ; ===========GAMEPLAY LOOP===========
 mov ax, 3
-int 33h
+int 33h         ; detect user input
 
-push bx
+push bx         ; BX contains left/right click so push to stack
 mov ax, cx      ; cx, dx in subpixels
 mov cl, 8       ; hence div by 8
 div cl
 
-xchg ax, dx 
+xchg ax, dx
 div cl
 
 mov dh, al
 mov bh, display
-mov ah, 2
+mov ah, 2       ; move text cursor to mouse to replace block
 int 10h
 
-pop bx
-cmp bl, 1
+pop bx          ; restore left/right click
+cmp bl, 1       ; if left click, reveal tile
 je revealTile
 
-cmp bl, 2
+cmp bl, 2       ; if right click, place flag
 je placeFlagChar
 
-; Check if WIN condition
+; Check if WIN condition => only bombs left on screen
 ; i.e. numOfTiles - numOfRevealed = numOfBombs
-mov ax, 480
+mov ax, 480     ; 480 <= number of tiles on screen
 sub ax, numOfRevealed
-cmp ax, numOfBombs
-je winExit
+cmp ax, numOfBombs  ; if num of remaining = num of bombs
+je winExit          ; win
 
 jmp again
 
@@ -354,39 +355,39 @@ revealTile:
 
 mov cl, flagChar
 mov bl, display
-call check
-je leftMouseDown
+call check          ; check if current tile is flagChar
+je leftMouseDown    ; if yes, ignore click
 
-mov cl, emptyChar
+mov cl, emptyChar   ; check if empty tile
 mov bl, display
 call check
-jne leftMouseDown
+jne leftMouseDown   ; if not empty, ignore click
 
-call copyTile
+call copyTile       ; when click not ignored, copy tile
 
-cmp al, mineChar
-je loseExit
+cmp al, mineChar    ; if copied tile = mine
+je loseExit         ; lose
 
-cmp al, '0'
-jne leftMouseDown
-call revealZeros
+cmp al, '0'         ; if copied tile = '0'
+jne leftMouseDown   ;   
+call revealNeighbours    ; reveal neighbour tiles
 
 leftMouseDown:
 mov ax, 3
 int 33h
 cmp bl, 1
-je leftMouseDown
-jmp again
+je leftMouseDown    ; loop until mouse click is released
+jmp again           ; return to function
 
 ; RIGHT CLICK FUNCTION
 placeFlagChar:
 
 mov cl, flagChar
 mov bl, display
-call check
-jne flagCharTile
+call check          ; check if tile is flagChar
+jne flagCharTile    ; if yes, toggle off
 
-mov al, emptyChar       ; empty box
+mov al, emptyChar
 mov ah, 09h  
 mov bl, 70h 
 mov cx, 1
@@ -398,10 +399,10 @@ flagCharTile:
 
 mov cl, emptyChar
 mov bl, display
-call check
+call check          ; else, check if empty char to toggle on
 jne rightMouseDown
 
-mov al, flagChar    ; flagChar
+mov al, flagChar
 mov ah, 09h  
 mov bl, 1100b 
 mov cx, 1
@@ -412,40 +413,38 @@ rightMouseDown:
 mov ax, 3
 int 33h
 cmp bl, 2
-je rightMouseDown
-jmp again
+je rightMouseDown   ; loop until mouse released
+jmp again           ; return
 
 ; GAMELOOP PROCEDURES
-check proc
-    mov ah, 2
-    int 10h
+check proc          ; DX: row, col
+    mov ah, 2       ; CL: char to check
+    int 10h         ; BL: page to check
     
     mov ah, 8
     int 10h
     
-    cmp al, cl
+    cmp al, cl      ; set relevant flags
     ret
 check endp
 
-copyTile proc
+copyTile proc           ; DX: row, col
     push cx
     mov bh, minefield
     mov ah, 2
-    int 10h
+    int 10h             ; move cursor to hidden page
     
     mov ah, 8
-    int 10h
-    mov bl, ah
-    
-    notZero:
+    int 10h             ; read text and
+    mov bl, ah          ; move char to BL for next int
     
     mov bh, display
     mov ah, 2
-    int 10h
+    int 10h             ; move cursor to main page
     
     mov ah, 09h
     mov bh, display
-    mov cx, 1
+    mov cx, 1           ; write char
     int 10h
     
     inc numOfRevealed
@@ -453,156 +452,71 @@ copyTile proc
     ret
 copyTile endp
 
-revealZeros proc
-    dec dh
+revealNeighbours proc   ; Recursive function to reveal neighbours
+    dec dh          ; N -> NE -> NW -> E -> W -> S -> SE -> SW
     
-    mov cl, emptyChar
-    mov bh, display
-    call check
-    jne noNZero
+    call revealTiles
+
+    inc dl      
     
-    call copyTile
+    call revealTiles
     
-    mov cl, '0'
-    mov bh, minefield
-    call check
-    jne noNZero
-    
-    call revealZeros
-    
-    noNZero:
-    inc dl
-    mov cl, emptyChar
-    mov bh, display
-    call check
-    jne noNEZero
-    
-    call copyTile
-    
-    mov cl, '0'
-    mov bh, minefield
-    call check
-    jne noNEZero
-    
-    call revealZeros
-    
-    noNEZero:
     sub dl, 2
     
-    mov cl, emptyChar
-    mov bh, display
-    call check
-    jne noNWZero
+    call revealTiles
     
-    call copyTile
-    
-    mov cl, '0'
-    mov bh, minefield
-    call check
-    jne noNWZero
-    
-    call revealZeros
-    
-    noNWZero:
     add dl, 2
     inc dh
     
-    mov cl, emptyChar
-    mov bh, display
-    call check
-    jne noEZero
+    call revealTiles
     
-    call copyTile
-    
-    mov cl, '0'     
-    mov bh, minefield
-    call check
-    jne noEZero
-    
-    call revealZeros
-    
-    noEZero: 
     dec dl
     dec dl
     
-    mov cl, emptyChar
-    mov bh, display
-    call check
-    jne noWZero
+    call revealTiles
     
-    call copyTile
-    
-    mov cl, '0'
-    mov bh, minefield
-    call check
-    jne noWZero
-    
-    call revealZeros
-    
-    noWZero:
     inc dl
     inc dh
     
-    mov cl, emptyChar
-    mov bh, display
-    call check
-    jne noSZero
+    call revealTiles
     
-    call copyTile
+    dec dl
     
-    mov cl, '0'
-    mov bh, minefield
-    call check
-    jne noSZero
+    call revealTiles
     
-    call revealZeros
+    add dl, 2
+    call revealTiles
     
-    noSZero:
-    inc dl
-    
-    mov cl, emptyChar
-    mov bh, display
-    call check
-    jne noSWZero
-    
-    call copyTile
-    
-    mov cl, '0'
-    mov bh, minefield
-    call check
-    jne noSWZero
-    
-    call revealZeros
-    
-    noSWZero:
-    sub dl, 2
-    
-    mov cl, emptyChar
-    mov bh, display
-    call check
-    jne noSEZero
-    
-    call copyTile
-    
-    mov cl, '0'
-    mov bh, minefield
-    call check
-    jne noSEZero
-    
-    call revealZeros
-    
-    noSEZero:
     dec dh
-    inc dl
+    dec dl
     mov ah, 2
     int 10h
     
     ret
-revealZeros endp
+revealNeighbours endp
+
+revealTiles proc
+    mov cl, emptyChar
+    mov bh, display
+    call check          ; check if empty tile
+    jne noZero          ; if not empty skip to next tile
+    
+    call copyTile       ; reveal tile
+    
+    mov cl, '0'
+    mov bh, minefield
+    call check          ; check if 0
+    jne noZero          ; if not 0, skip recursion
+    
+    call revealNeighbours
+    
+    noZero:
+    ret
+revealTiles endp
 ; END GAMELOOP PROCEDURES
 
 showField proc
-    mov ax, 0501h   ; <=========to check if written
+    mov ax, 0501h   ; reveal full board
     int 10h
     
     mov dx, 0
