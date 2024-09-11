@@ -127,3 +127,8 @@ _Program_
 
     -   Tile copied from secondary to main page
     -   Counter of number of dug blocks incremented
+
+-   Recursive algorithm reveals neighbouring tiles if '0'
+
+    -   Checks from top row to bottom row
+    -   If any neighbouring tile is '0', call procedure again
