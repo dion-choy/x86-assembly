@@ -5,9 +5,10 @@ jmp drawField
 
 mineChar equ 162
 flagChar equ 16
-display equ 0
-minefield equ 1
-numOfBombs equ 99
+emptyChar equ 176
+display equ 0   ; main page
+minefield equ 1 ; minefield page
+numOfBombs equ 50   ; <===== num of mines
 numOfRevealed dw 0
 pRNG db 0
 
@@ -27,6 +28,7 @@ int 10h
 mov dh, 3
 mov dl, 25     
 mov bh, minefield     ; <=======change back to page 1 to hide
+mov bl, 70h
 mov cx, 16
 mov al, '0'
 call fillWithChar
@@ -94,8 +96,9 @@ call drawBorder
 mov dh, 3
 mov dl, 25     
 mov bh, display     ; <=======change back to page 1 to hide
+mov bl, 70h
 mov cx, 16
-mov al, ' '
+mov al, emptyChar
 call fillWithChar
 
 jmp allowInput
@@ -109,7 +112,7 @@ fillWithChar proc
     mov ah, 2
     int 10h
     
-    mov ah, 0Ah
+    mov ah, 09h
     mov cx, 30
     int 10h
     pop cx
@@ -279,7 +282,7 @@ mov bl, display
 call check
 je leftMouseDown
 
-mov cl, ' '
+mov cl, emptyChar
 mov bl, display
 call check
 jne leftMouseDown
@@ -308,9 +311,9 @@ mov bl, display
 call check
 jne flagCharTile
 
-mov al, ' '     ; empty box
+mov al, emptyChar       ; empty box
 mov ah, 09h  
-mov bl, 0Fh 
+mov bl, 70h 
 mov cx, 1
 int 10h
 
@@ -318,7 +321,7 @@ jmp rightMouseDown
 
 flagCharTile:
 
-mov cl, ' '
+mov cl, emptyChar
 mov bl, display
 call check
 jne rightMouseDown
@@ -359,6 +362,13 @@ copyTile proc
     int 10h
     mov bl, ah
     
+    cmp al, '0'
+    jne notZero
+    
+    mov bl, 77h
+    
+    notZero:
+    
     mov bh, display
     mov ah, 2
     int 10h
@@ -376,7 +386,7 @@ copyTile endp
 revealZeros proc
     dec dh
     
-    mov cl, ' '
+    mov cl, emptyChar
     mov bh, display
     call check
     jne noNZero
@@ -390,11 +400,44 @@ revealZeros proc
     
     call revealZeros
     
-    noNZero:        
+    noNZero:
     inc dl
+    mov cl, emptyChar
+    mov bh, display
+    call check
+    jne noNEZero
+    
+    call copyTile
+    
+    mov cl, '0'
+    mov bh, minefield
+    call check
+    jne noNEZero
+    
+    call revealZeros
+    
+    noNEZero:
+    sub dl, 2
+    
+    mov cl, emptyChar
+    mov bh, display
+    call check
+    jne noNWZero
+    
+    call copyTile
+    
+    mov cl, '0'
+    mov bh, minefield
+    call check
+    jne noNWZero
+    
+    call revealZeros
+    
+    noNWZero:
+    add dl, 2
     inc dh
     
-    mov cl, ' '
+    mov cl, emptyChar
     mov bh, display
     call check
     jne noEZero
@@ -412,7 +455,7 @@ revealZeros proc
     dec dl
     dec dl
     
-    mov cl, ' '
+    mov cl, emptyChar
     mov bh, display
     call check
     jne noWZero
@@ -430,7 +473,7 @@ revealZeros proc
     inc dl
     inc dh
     
-    mov cl, ' '
+    mov cl, emptyChar
     mov bh, display
     call check
     jne noSZero
@@ -445,7 +488,42 @@ revealZeros proc
     call revealZeros
     
     noSZero:
+    inc dl
+    
+    mov cl, emptyChar
+    mov bh, display
+    call check
+    jne noSWZero
+    
+    call copyTile
+    
+    mov cl, '0'
+    mov bh, minefield
+    call check
+    jne noSWZero
+    
+    call revealZeros
+    
+    noSWZero:
+    sub dl, 2
+    
+    mov cl, emptyChar
+    mov bh, display
+    call check
+    jne noSEZero
+    
+    call copyTile
+    
+    mov cl, '0'
+    mov bh, minefield
+    call check
+    jne noSEZero
+    
+    call revealZeros
+    
+    noSEZero:
     dec dh
+    inc dl
     mov ah, 2
     int 10h
     
