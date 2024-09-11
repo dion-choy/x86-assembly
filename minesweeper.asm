@@ -20,20 +20,20 @@ drawField:      ; draw minefield
 mov ax, 3
 int 10h
 
+mov dh, 3
+mov dl, 25     
+mov bh, minefield     ; <=======change back to page 1 to hide
+mov bl, 77h
+mov cx, 16
+mov al, '0'
+call fillWithChar
+
+; load number of mines, setcursor to full box
 mov ch, 0
 mov cl, 7
 mov ah, 1
 int 10h
 
-mov dh, 3
-mov dl, 25     
-mov bh, minefield     ; <=======change back to page 1 to hide
-mov bl, 70h
-mov cx, 16
-mov al, '0'
-call fillWithChar
-
-; load number of mines
 mov cx, numOfBombs
 populateMines:
 push cx
@@ -79,10 +79,19 @@ je rerollCoords
 
 mov al, mineChar         ; if no mineChar, draw
 mov ah, 09h  
-mov bl, 0F0h       ; attribute black colour
+mov bl, 0F0h        ; attribute black colour
 mov cx, 1
 int 10h
-call incSides
+
+mov ch, 32          ; when cursor full block and black text,
+mov cl, 7           ; creates blinking effect
+mov ah, 1           ; these lines REMOVE effect
+int 10h
+call incSides       
+mov ch, 0           ; restore with block cursor
+mov cl, 7           ; so bombs have blinking effect
+mov ah, 1
+int 10h
 
 pop cx
 loop populateMines
@@ -229,7 +238,68 @@ incSides endp
 incTiles proc
     push cx
     inc al
-    mov ah, 0Ah
+    and ah, 0F0h
+    
+    cmp al, '1'
+    jne above1
+    or ah, 09h
+    jmp colourEnd
+    
+    above1:
+    cmp al, '2'
+    jne above2
+    or ah, 02h
+    jmp colourEnd
+    
+    above2:
+    cmp al, '3'
+    jne above3
+    or ah, 0Ch
+    jmp colourEnd
+    
+    above3:
+    cmp al, '4'
+    jne above4
+    or ah, 01h
+    jmp colourEnd
+    
+    above4:
+    cmp al, '5'
+    jne above5
+    or ah, 06h
+    jmp colourEnd
+    
+    above5:
+    cmp al, '6'
+    jne above6
+    or ah, 03h
+    jmp colourEnd
+    
+    above6:
+    cmp al, '7'
+    jne above7
+    or ah, 00h
+    jmp colourEnd
+    
+    above7:
+    cmp al, '8'
+    jne above8
+    or ah, 08h
+    jmp colourEnd
+    
+    above8:
+    cmp al, '9'
+    jne notNum
+    or ah, 0Fh
+    jmp colourEnd
+    
+    notNum:
+    or ah, 07h
+    
+    colourEnd:
+    mov bl, ah
+    
+    mov ah, 09h
     mov cx, 1
     int 10h
     pop cx
@@ -238,6 +308,11 @@ incTiles endp
 ; END SETUP PROCEDURES
 
 allowInput:     ; start user input
+mov ch, 6
+mov cl, 7
+mov ah, 1
+int 10h
+
 mov ax, 0
 int 33h
 
@@ -361,11 +436,6 @@ copyTile proc
     mov ah, 8
     int 10h
     mov bl, ah
-    
-    cmp al, '0'
-    jne notZero
-    
-    mov bl, 77h
     
     notZero:
     
