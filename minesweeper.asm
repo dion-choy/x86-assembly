@@ -8,7 +8,7 @@ flagChar equ 16     ; ASCII for flag
 emptyChar equ 176   ; ASCII for shaded block
 display equ 0   ; main page
 minefield equ 1 ; minefield (hidden) page
-numOfBombs equ 99   ; <========= NUM OF MINES
+numOfBombs equ 50   ; <========= NUM OF MINES
 numOfRevealed dw 0
 pRNG db 0           ; store next num
 
@@ -361,16 +361,19 @@ je leftMouseDown    ; if yes, ignore click
 mov cl, emptyChar   ; check if empty tile
 mov bl, display
 call check
-jne leftMouseDown   ; if not empty, ignore click
+jne chordClick      ; if not empty, check if chordClick
 
 call copyTile       ; when click not ignored, copy tile
 
-cmp al, mineChar    ; if copied tile = mine
-je loseExit         ; lose
+cmp al, '0'             ; if copied tile = '0'
+jne leftMouseDown
+call revealNeighbours   ; reveal neighbour tiles 
+jmp leftMouseDown
 
-cmp al, '0'         ; if copied tile = '0'
-jne leftMouseDown   ;   
-call revealNeighbours    ; reveal neighbour tiles
+chordClick:
+cmp al, '0'             ; if copied tile = '0'
+je leftMouseDown       ; skip chord click
+call chordClickProc
 
 leftMouseDown:
 mov ax, 3
@@ -380,6 +383,7 @@ je leftMouseDown    ; loop until mouse click is released
 jmp again           ; return to function
 
 ; RIGHT CLICK FUNCTION
+
 placeFlagChar:
 
 mov cl, flagChar
@@ -417,6 +421,72 @@ je rightMouseDown   ; loop until mouse released
 jmp again           ; return
 
 ; GAMELOOP PROCEDURES
+chordClickProc proc
+    sub al, '0'
+    mov bl, 0
+    push ax
+    
+    dec dh          ; N -> NE -> NW -> E -> W -> S -> SE -> SW
+    
+    call chordClickCheck
+
+    inc dl      
+    
+    call chordClickCheck
+    
+    sub dl, 2
+    
+    call chordClickCheck
+    
+    add dl, 2
+    inc dh
+    
+    call chordClickCheck
+    
+    dec dl
+    dec dl
+    
+    call chordClickCheck
+    
+    inc dl
+    inc dh
+    
+    call chordClickCheck
+    
+    dec dl
+    
+    call chordClickCheck
+    
+    add dl, 2
+    call chordClickCheck
+    
+    dec dh
+    dec dl
+    mov ah, 2
+    int 10h
+    
+    pop ax
+    cmp bl, al
+    jne chordClickProcEnd
+    call revealNeighbours
+    
+    chordClickProcEnd:
+    ret
+chordClickProc endp
+
+chordClickCheck proc
+    mov cl, flagChar
+    mov bh, display
+    
+    call check
+    jne noFlagTile
+    
+    inc bl
+    
+    noFlagTile:
+    ret
+chordClickCheck endp
+
 check proc          ; DX: row, col
     mov ah, 2       ; CL: char to check
     int 10h         ; BL: page to check
@@ -446,6 +516,9 @@ copyTile proc           ; DX: row, col
     mov bh, display
     mov cx, 1           ; write char
     int 10h
+    
+    cmp al, mineChar    ; if copied tile = mine
+    je loseExit         ; lose
     
     inc numOfRevealed
     pop cx      
@@ -533,6 +606,9 @@ lea dx, winMessage
 jmp finalExit 
 
 loseExit:
+pop ax
+cmp sp, 0FFFEh
+jne loseExit        ; clear stack so ret works
 call showField
 
 lea dx, loseMessage 
@@ -550,7 +626,6 @@ int 16h
 
 mov ax, 3
 int 10h
-
 ret
 
 

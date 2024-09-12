@@ -104,6 +104,10 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/) \
         -   Right click places flag
     -   Update screen with dug flags
 
+-   Chord clicking
+
+    -   If a numbered tile with the same number of flags surrounding is clicked, all neighbouring tiles except flagged tiles will be revealed
+
 -   Win condition:
 
     -   Only mines remaining in field (Either flagged or unflagged)
@@ -129,7 +133,7 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/) \
     -   Tile copied from secondary to main page
     -   Counter of number of dug blocks incremented
 
--   Recursive algorithm reveals neighbouring tiles if '0'
+-   Recursive flood fill algorithm reveals neighbouring tiles if '0'
 
     -   Checks from top row to bottom row
     -   If any neighbouring tile is '0', call procedure again
