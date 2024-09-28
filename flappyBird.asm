@@ -227,9 +227,14 @@ mov ah, 00h
 int 16h
 
 cmp ah, 39h     ; keycode for spacebar
-jne contLoop
+jne checkEsc
 
 mov velo, -3
+
+checkEsc:
+
+cmp al, 1bh
+je escape
 
 contLoop:
 
@@ -283,7 +288,6 @@ drawPillar proc
     
     pop cx
     loop drawVertPillar
-    
     
     pop cx
     
@@ -480,6 +484,7 @@ mov dl, 0
 mov ah, 2
 int 10h
 
+escape:
 ret
 
 
