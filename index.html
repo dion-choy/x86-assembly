@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>js-dos api</title>
+        <style>
+            body {
+                margin: 0px;
+                display: flex;
+                overflow: hidden;
+                justify-content: center;
+
+                align-items: center;
+                height: 100vh;
+            }
+
+            .dosbox-container {
+                width: min(100vh * 1.6, 100vw);
+                aspect-ratio: 1.6;
+            }
+
+            .dosbox-canvas {
+                width: inherit;
+                height: inherit;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="dosbox"></div>
+
+        <!--
+        <br />
+        <button onclick="dosbox.requestFullScreen();">Make fullscreen</button>
+        -->
+
+        <script src="https://js-dos.com/cdn/js-dos-api.js"></script>
+        <script>
+            ogLog = console.log;
+            console.log = function (txt) {
+                ogLog(txt);
+                if (txt == "SDL_Quit called (and ignored)") {
+                    window.close();
+                }
+            };
+
+            var dosbox = new Dosbox({
+                id: "dosbox",
+                onload: function (dosbox) {
+                    dosbox.run("./games.zip", "start.bat");
+                },
+                onrun: function (dosbox, app) {
+                    console.log("App '" + app + "' is runned");
+                },
+            });
+
+            document.getElementsByClassName("dosbox-start")[0].click();
+        </script>
+    </body>
+</html>
