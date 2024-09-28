@@ -3,13 +3,21 @@ org 100h
 
 jmp setup
 
+screenHeight equ 25
+screenWidth equ 80
+
 termVelo equ 2
 accel equ 1
 distBtwnPillar equ 20
 height equ 24
 size equ 4
 gap equ 5
+pillarWidth equ 4
 
+startMsg db "Welcome to Flappy Bird!", 0Dh, 0Ah
+db "Press ESC to exit at any time", 0Dh, 0Ah 
+db "Press any key to start", 0Dh, 0Ah, "$"
+endMsg db "Score: $"
 loseFlag db 0
 velo db 1
 pillars db size DUP(0)
@@ -76,6 +84,11 @@ checkColl proc
     
     mov dh, -2
     
+    cmp firstPillar, 13
+    jne notCeiling
+    
+    mov loseFlag, 1
+    
     notCeiling:
     mov ah, 08h
     int 10h
@@ -98,7 +111,7 @@ checkColl proc
     
     notPipe:
     
-    cmp firstPillar, 7
+    cmp firstPillar, 10-pillarWidth
     jne notIncScore
     inc score
     
@@ -154,7 +167,7 @@ mov dl, 0
 mov ah, 2
 int 10h
 
-mov cx, 80
+mov cx, screenWidth
 mov al, '='
 mov ah, 0Ah
 int 10h 
@@ -162,6 +175,32 @@ int 10h
 mov dh, 11
 call drawBird
 call generateGap
+
+push dx
+mov dx, 0
+mov ah, 2
+int 10h
+
+lea dx, startMsg
+mov ah, 9
+int 21h
+
+mov ah, 00h
+int 16h
+
+mov dx, 0
+mov ah, 2
+int 10h
+
+mov ah, 0Ah
+mov al, ' '
+mov cx, 240
+mov bx, 0
+int 10h
+
+pop dx
+mov ah, 2
+int 10h
 
 gameLoop:
 call drawPillar
@@ -177,6 +216,8 @@ call drawBird
 cmp loseFlag, 1
 je exit
 
+call delay
+
 mov ah, 01h
 int 16h
 
@@ -185,7 +226,7 @@ jz contLoop
 mov ah, 00h
 int 16h
 
-cmp ah, 39h ; keycode for spacebar
+cmp ah, 39h     ; keycode for spacebar
 jne contLoop
 
 mov velo, -3
@@ -198,8 +239,6 @@ jg addAccel
 add velo, accel
 addAccel:
 
-call delay
-
 jmp gameLoop
 
 drawPillar proc
@@ -211,7 +250,7 @@ drawPillar proc
     drawMultPillar:
     push cx
     
-    cmp dl, 78
+    cmp dl, screenWidth-pillarWidth-1
     jnb skipPillar
     
     mov dh, 0
@@ -223,12 +262,12 @@ drawPillar proc
     int 10h   
     
     mov bl, 0Ah
-    mov cx, 3
+    mov cx, pillarWidth
     mov al, 186
     mov ah, 09h
     int 10h
     
-    add dl, 3
+    add dl, pillarWidth
     mov ah, 2
     int 10h
     
@@ -238,7 +277,7 @@ drawPillar proc
     mov ah, 09h
     int 10h
     
-    sub dl, 3
+    sub dl, pillarWidth
     
     inc dh
     
@@ -263,7 +302,7 @@ drawPillar proc
     int 10h
     
     mov bl, 0Fh
-    mov cx, 3
+    mov cx, pillarWidth
     mov al, ' '
     mov ah, 09h
     int 10h
@@ -290,7 +329,7 @@ drawPillar proc
     int 10h
     
     mov bl, 0Fh
-    mov cx, 3
+    mov cx, pillarWidth
     mov al, ' '
     mov ah, 09h
     int 10h
@@ -341,7 +380,7 @@ delay proc
     
     mov ah, 86h
     mov cx, 03h
-    mov dx, 86D2h
+    mov dx, 8000h
     int 15h
     
     pop ax
@@ -351,7 +390,95 @@ delay proc
     ret
 delay endp
 
+printScore proc
+    mov cx, 1
+            
+    mov ah, 0
+    mov al, score
+    cmp al, 0
+    je printZero
+    
+    mov cx, 0
+    
+    getRadix:
+    mov ah, 0
+    
+    inc cx
+    mov bl, 10
+    div bl
+    
+    cmp ax, 0
+    ja getRadix
+    
+    dec cx
+ 
+    printChar:
+    mov al, score
+    mov bl, 10
+    
+    push cx
+    getDigit:
+    mov ah, 0
+    div bl
+    loop getDigit
+    pop cx
+              
+    printZero:
+    push cx
+    mov al, ah
+    
+    add al, '0'
+    mov bl, 0Fh
+    mov cx, 1
+    mov ah, 09h
+    int 10h
+    
+    inc dl
+    mov ah, 2
+    int 10h
+    
+    pop cx
+    loop printChar
+    
+    ret
+printScore endp
+
 exit:
+
+mov al, 2
+mov bh, 0Fh
+mov cx, 0
+mov dh, screenHeight-1
+mov dl, screenWidth-1
+
+mov ah, 6
+int 10h
+
+mov bh, 0
+mov dh, screenHeight-2
+mov dl, 0
+
+mov ah, 2
+int 10h
+
+push dx
+lea dx, endMsg
+mov ah, 9
+int 21h
+pop dx
+
+add dl, 7
+mov ah, 2
+int 10h
+
+call printScore
+
+mov bh, 0
+mov dh, screenHeight-1
+mov dl, 0
+
+mov ah, 2
+int 10h
 
 ret
 
