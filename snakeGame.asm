@@ -27,7 +27,7 @@ start:
 mov cx, 0
 
 mov ah, 0
-mov al, 0
+mov al, 3
 int 10h
 
 lea dx, start1
@@ -37,8 +37,8 @@ int 21h
 mov ah, 0
 int 16h
  
-mov ah, 0 
-mov al, 0
+mov ah, 0
+mov al, 3
 int 10h
 
 mov ch, 32
@@ -254,7 +254,7 @@ checkCollision proc
     cmp dh, 25          ; if row out of bound, lose
     jae collision
     
-    cmp dl, 40          ; if col out of bound, lose
+    cmp dl, 80          ; if col out of bound, lose
     jae collision
     jmp checkApple
      
@@ -294,10 +294,10 @@ drawApple proc
     div bl
     mov dh, ah          ; modulus so row is 0-25
     
-    mov bx, 40
+    mov bx, 80
     mov al, dl
     div bl
-    mov dl, ah          ; modulus so col is 0-40
+    mov dl, ah          ; modulus so col is 0-80
       
     mov ah, 2
     int 10h             ; interrupt to move cursor
@@ -345,7 +345,7 @@ jmp start
 
 exit:
 mov ah, 0
-mov al, 0
+mov al, 3
 int 10h
 
 mov al, length
