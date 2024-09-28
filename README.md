@@ -3,9 +3,9 @@
 ### These files have been created and debugged in EMU8086
 
 [Documentation for EMU8086](https://yassinebridi.github.io/asm-docs/) \
-Tested on x86 emulator: [DOSBox](https://www.dosbox.com/) \
+Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
 
-[Webpage Demo](index.html)
+[Webpage Demo](https://dion-choy.github.io/x86-assembly/) (using js dos API)
 &nbsp;
 
 ## Programs Made
@@ -27,7 +27,6 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/) \
 #### sqrt.asm
 
 -   Low Precision Square Root calculator
--   Basic I/O
 
     -   Input value
     -   Display result
@@ -39,10 +38,13 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/) \
 #### snakeGame.asm
 
 -   Snake Game
--   I/O
 
-    -   Input directions
-    -   Draw snake and apples
+    -   Input up, down, left, right keys to change direction
+
+-   Lose condition:
+
+    -   Hit wall
+    -   Hit self
 
     **_Program_**
 
@@ -59,9 +61,9 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/) \
 #### ticTacToe.asm
 
 -   2 Player Tic Tac Toe Game
--   I/O
-    -   Register mouse clicks
-    -   Draw grid, with X's and O's
+
+    -   Current player clicks on grid to place symbol
+
 -   Win condition:
 
     -   Either player obtains 3 in a row
@@ -74,9 +76,9 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/) \
 #### pong.asm
 
 -   2 Player Pong Game
--   I/O
 
-    -   Input up and down keystroke directions for both paddles
+    -   Left paddle controlled by 'w' and 's' key
+    -   Right paddle controlled by up and down key
 
 -   Win condition:
 
@@ -99,12 +101,9 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/) \
 #### minesweeper.asm
 
 -   Minesweeper Game
--   I/O
 
-    -   Register mouse clicks
-        -   Left click digs tile
-        -   Right click places flag
-    -   Update screen with dug flags
+    -   Left click digs tile
+    -   Right click places flag
 
 -   Chord clicking
 
@@ -139,3 +138,29 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/) \
 
     -   Checks from top row to bottom row
     -   If any neighbouring tile is '0', call procedure again
+
+#### flappyBird.asm
+
+-   Flappy Bird
+
+    -   Spacebar to flap wings
+
+-   Lose condition:
+
+    -   Bird hits floor
+    -   Bird hits pillar
+
+    **_Program_**
+
+-   Pseudo-random number generator
+
+    -   Uses system time to generate height of gap
+
+-   Simple gravity
+
+    -   Gravity of 1 char/frame
+    -   Terminal velocity of 2 char/frame
+
+-   Flapping wing:
+    -   Change velocity to upwards 3 char/frame
+    -   Gravity makes a smoother arc
