@@ -2,17 +2,20 @@ data segment
 
 enterStr db "Enter text to change to QR code: ", 0Dh, 0Ah, '$'
 
-str db MAX_SIZE DUP(0)
-strLen db 0
+str db 4
+  db 0
+strIn db MAX_SIZE DUP(0)
+remainder db 15 DUP(0)
 strPtr db 0
+strLen db 0
 
-color db 1111b
+color db 0
 
-g(x) db 0, 8, 183, 61, 91, 202, 37, 51, 58
+gx db 0, 8, 183, 61, 91, 202, 37, 51, 58
     db 58, 237, 140, 124, 5, 99, 105
     
-mask dw 5412h, 5125h, 5E7Ch, 5B4Bh
-    dw 45F9h, 40CEh, 4F97h, 4AA0h
+mask dw 77C4h, 72F3h, 7DAAh, 789Dh
+    dw 662Fh, 6318h, 6C41h, 6976h
 
 expToNum db 1, 2, 4, 8, 16, 32, 64, 128, 29, 58, 116, 232
     db 205, 135, 19, 38, 76, 152, 45, 90, 180, 117, 234, 201
@@ -66,13 +69,37 @@ stack segment
 ends
 
 code segment
+
+MAX_SIZE equ 53
+CHOSEN_MASK equ 2
+
+drawSplitZ proc
+    
+    mov bl, strPtr
+    mov al, str[bx]
+    
+    mov cx, 6
+    call downZBit
+    
+    mov cx, 1
+    call upZBit
+    
+    sub dh, 8
+    
+    mov cx, 1
+    call upZBit
+    
+    inc strPtr
+    
+    ret
+drawSplitZ endp
     
 drawZInterIrregU proc
     
     mov bl, strPtr
     mov al, str[bx]
     
-    mov cx, 2
+    mov cx, 6
     call downZBit
     
     mov cx, 2
@@ -80,9 +107,6 @@ drawZInterIrregU proc
     
     inc dh
     sub dl, 2
-    
-    mov cx, 4
-    call upZBit
     
     inc strPtr
     
@@ -94,17 +118,14 @@ drawZInterIrregD proc
     mov bl, strPtr
     mov al, str[bx]
     
-    mov cx, 2
+    mov cx, 6
     call upZBit
     
     mov cx, 2
     call upRectBit
     
-    inc dh
     sub dl, 2
-    
-    mov cx, 4
-    call downZBit
+    inc dh
     
     inc strPtr
     
@@ -201,45 +222,45 @@ upZBit proc
     ret
 upZBit endp
 
-drawIrregZ proc
+drawIrregP proc
     
     mov bl, strPtr
     mov al, str[bx]
     
+    mov cx, 4
+    call upZBit
+    
     dec dl
     
     mov cx, 4
-    writeIrregZ:
+    writeIrregP:
     
     shl al, 1
-    jnc noIrregZ
+    jnc noIrregP
     call drawPx
     
-    noIrregZ:
+    noIrregP:
     
     dec dh
-    loop writeIrregZ
-    
-    mov cx, 4
-    call upZBit
+    loop writeIrregP
     
     inc strPtr
     
     ret
-drawIrregZ endp
+drawIrregP endp
 
 drawIrregL proc
     
     mov bl, strPtr
     mov al, str[bx]
     
-    mov cx, 2
+    mov cx, 6
     call upRectBit
     
     sub dl, 2
     inc dh
     
-    mov cx, 6
+    mov cx, 2
     call downRectBit
     
     inc strPtr
@@ -265,25 +286,6 @@ drawHoriByteU proc  ; U represents starting from top(Up)
     
     ret
 drawHoriByteU endp
-
-drawHoriByteD proc  ; D represents starting from bottom(Down)
-    
-    mov bl, strPtr
-    mov al, str[bx]
-    
-    mov cx, 4
-    call upRectBit
-    
-    sub dl, 2
-    inc dh
-    
-    mov cx, 4
-    call downRectBit
-    
-    inc strPtr
-    
-    ret
-drawHoriByteD endp
 
 downRectByte proc
     
@@ -371,6 +373,13 @@ upRectBit proc
     sub dh, 5
     
     skipSplitVertUp:
+    
+    cmp dx, 0906h
+    jne skipSplitHori
+    
+    dec dl
+    
+    skipSplitHori:
     
     loop writeUpVertChar
 
@@ -510,6 +519,53 @@ drawPx proc     ; dh input row, dl input col
     ret
 drawPx endp
 
+getPx proc     ; dh input row, dl input col
+    push cx
+    push dx
+    
+    add dx, 0101h
+    
+    mov ax, 5
+    mul dl
+    mov cx, ax
+    add cx, 93
+    sub cx, 5
+    
+    mov ax, 5
+    mul dh
+    mov dx, ax
+    add dx, 33
+    sub dx, 5
+    
+	mov ah, 0dh
+	int 10h
+    
+    pop dx
+    pop cx
+    ret
+getPx endp
+
+invertCol proc
+    
+    invertPx:
+    
+    call getPx
+    xor al, 0Fh
+    mov color, al
+    call drawPx
+    inc dh
+    
+    cmp dh, 6
+    jne noSkipInvert
+    inc dh
+    
+    noSkipInvert:
+    
+    loop invertPx
+    
+    ret
+invertCol endp
+
 start:
     mov ax, data
     mov ds, ax
@@ -543,15 +599,13 @@ start:
     je getInput
     
     mov bl, strLen
-    mov str[bx], al
+    mov strIn[bx], al
     
     inc strLen
     
     mov ah, 0Eh
     int 10h
     
-    
-    MAX_SIZE equ 53
     
     notValidChar:
     
@@ -567,7 +621,7 @@ start:
     dec dl
     
     mov bl, strLen
-    mov str[bx], 0
+    mov strIn[bx], 0
     atPageStart:
     
     mov ah, 2
@@ -584,17 +638,31 @@ start:
     cmp ah, 1Ch
     jne getInput
     
-    
     cmp strLen, 0
     je endProg
     
+    ; shift in mem by 4 bits
+    
+    mov ah, str
+    mov al, strLen
+    shl ax, 4
+    mov str, ah
+    
+    mov bx, 0
+    shiftBy4Bit:
+    shl ax, 4
+    
+    mov al, strIn[bx]
+    shl ax, 4
+    mov strIn[bx-1], ah
+    
+    inc bx
+    cmp bl, strLen
+    jna shiftBy4Bit
+    
     ; add padding
     
-    mov bh, 0
-    mov bl, strLen
-    mov ax, 0Eh
-    mov str[bx], al
-    
+    sub bx, 2
     mov cx, 53
     sub cl, strLen
     jz endAddPadding
@@ -603,22 +671,30 @@ start:
     inc bx
     test cx, 1
     jz evenCountAddPadding
-    mov str[bx], 0C1h
+    mov strIn[bx], 0ECh
     loop addPadding
     jmp endAddPadding
     
     evenCountAddPadding:
-    mov str[bx], 01Eh
+    mov strIn[bx], 011h
     
     loop addPadding
     endAddPadding:
     
     ; end add padding
     
-    
     mov al, 13h
     mov ah, 0
     int 10h
+    
+    ; fill screen white
+    mov ah, 09
+	mov al, 219
+	mov bh, 0
+	mov bl, 0Fh
+	mov cx, 1000
+	int 10h
+	; fill screen white
     
     ; SETUP QR CODE
     mov dx, 0           
@@ -627,10 +703,8 @@ start:
     mov dx, 22
     call drawCorner
     
-    mov dh, 22
-    mov dl, 0
+    shl dx, 8
     call drawCorner
-    
     
     mov dh, 6
     mov dl, 6
@@ -652,48 +726,25 @@ start:
     mov dl, 8
     call drawPx
     
-    
     call drawSmallCorner
     
-    
-    mov dh, 28
-    mov dl, 27
-    call drawPx
     ; QR formatting over
     
     ; write size
-    mov dh, 26
+    mov dh, 28
     mov dl, 28
-    mov ah, 0
-    mov al, strLen
-    mov cx, 8
-    writeSize:
-    shl al, 1
-    jnc noSizePx
-    call drawPx
     
-    noSizePx:
-    
-    test cx, 1
-    jz evenSizeCount
-    dec dh
-    inc dl
-    jmp endSizeCheck
-    evenSizeCount:
-    dec dl
-    endSizeCheck:
-    loop writeSize
-    ; end write size
-    
-    mov cx, 3
+    mov cx, 5
     call upRectByte
     
-    call drawHoriByteD
+    inc dh
+    sub dl, 2
     
-    mov cx, 4
+    mov cx, 5
     call downRectByte
     
-    call drawHoriByteU
+    dec dh
+    sub dl, 2
     
     mov cx, 3
     call upRectByte
@@ -703,24 +754,16 @@ start:
     mov cx, 3
     call downRectByte
     
-    dec dh
-    sub dl, 2
-    mov cx, 1
+    call drawHoriByteU
     
-    call upRectByte
-    
-    call drawIrregZ
+    call drawIrregP
     
     mov cx, 4
     call upZByte
     
     mov cx, 2
-    
-    drawBytesLoop:
+    drawCols:
     push cx
-    
-    mov bl, strPtr
-    mov al, str[bx]
     
     call drawZInterIrregD
     
@@ -732,29 +775,189 @@ start:
     mov cx, 6
     call upZByte
     pop cx
-    loop drawBytesLoop
+    loop drawCols
+    
+    call drawZInterIrregD
+    
+    mov cx, 3
+    call downZByte
+    
+    push dx
+    
+    
+    ; error correction
+    errorCorrection:
+    
+    mov bh, 0
+    
+    mov strPtr, 0
+    
+    mov cx, 55
+    repeat55times:
+    push cx
+    
+    mov bl, strPtr
+    mov di, bx
+    
+    mov bl, str[bx]
+    mov al, numToExp[bx]
+    
+    mov cx, 16
+    multiplyGx:
+    push ax
+    
+    mov bx, cx
+    add al, gx[bx-1]
+    adc al, 0
+    
+    push bx
+    
+    mov bl, al
+    mov al, expToNum[bx]
+    
+    pop bx
+    xor str[bx-1][di], al
+    
+    pop ax
+    loop multiplyGx
+    
+    inc strPtr
+    pop cx
+    loop repeat55times
+    
+    ; end error correction
+    pop dx
+    
+    
+    ; draw error correction str
+    
+    mov strPtr, 55
+    
+    mov cx, 3
+    call downZByte
+    
+    call drawSplitZ
+    
+    mov cx, 2
+    call upZByte
     
     call drawZInterIrregD
     
     mov cx, 2
     call downZByte
     
-    mov bl, strPtr
-    mov al, str[bx]
+    call drawZInterIrregU
     
-    mov cx, 4
-    call downZBit
+    mov cx, 2
+    call upZByte
     
-    mov color, 0100b
+    call drawZInterIrregD
+    
+    mov cx, 2
+    call downZByte
+    
+    ; write error correction level and mask
+    ; horizontal
+    mov dx, 0800h
+    
+    mov ax, mask[CHOSEN_MASK*2]
+    
+    shl ax, 1
+    
+    mov cx, 15
+    horiInfo:
+    shl ax, 1
+    jnc noHoriBit
     call drawPx
-    mov color, 1111b
     
+    noHoriBit:
+    inc dl
     
-    ; error correction
+    cmp dl, 6
+    jne toRightPx
+    inc dl
+    toRightPx:
     
-    mov strPtr, 0
-    mov bl, strPtr
-    mov al, str[bx]
+    cmp dl, 8
+    jne toRightPx1
+    add dl, 13
+    toRightPx1:
+        
+    loop horiInfo
+    
+    ; vertical
+    mov dx, 1C08h
+    
+    mov ax, mask[CHOSEN_MASK*2]
+    
+    shl ax, 1
+    
+    mov cx, 15
+    vertInfo:
+    shl ax, 1
+    jnc noVertBit
+    call drawPx
+    
+    noVertBit:
+    dec dh
+    
+    cmp dh, 21
+    jne toTopPx
+    sub dh, 13
+    toTopPx:
+    
+    cmp dh, 6
+    jne toTopPx1
+    dec dh
+    toTopPx1:
+        
+    loop vertInfo
+    
+    ; CHOSEN_MASK = 2
+    mov dl, 09h
+    mov cx, 4   
+    repeat4ColInverts:
+    push cx
+    
+    mov dh, 0
+    mov cx, 28
+    call invertCol
+    
+    add dl, 3
+    pop cx
+    loop repeat4ColInverts
+    
+    mov dx, 0900h
+    mov cx, 8
+    call invertCol
+    
+    mov dx, 0903h
+    mov cx, 12
+    call invertCol
+    
+    mov dh, 9
+    mov dl, 21
+    mov cx, 11
+    call invertCol
+    
+    mov dh, 25
+    mov cx, 4
+    call invertCol
+    
+    mov dh, 9
+    mov dl, 24
+    mov cx, 11
+    call invertCol
+    
+    mov dh, 25
+    mov cx, 4
+    call invertCol
+    
+    mov dh, 9
+    mov dl, 27
+    mov cx, 20
+    call invertCol
+    
     
     jmp endProg
 
