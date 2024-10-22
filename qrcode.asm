@@ -1,6 +1,12 @@
+MAX_SIZE equ 53
+
 data segment
 
-enterStr db "Enter text to change to QR code: ", 0Dh, 0Ah, '$'
+enterMask db "Enter mask for QR code[0-7]", 0Dh, 0Ah
+    db "(If no number is entered, random mask will be chosen): "
+    db 0Dh, 0Ah, '$'
+enterStr db 0Dh, 0Ah, "Enter text to change to QR code: "
+    db 0Dh, 0Ah, '$'
 
 str db 4
   db 0
@@ -10,12 +16,15 @@ strPtr db 0
 strLen db 0
 
 color db 0
+maskNum db 0FFh
 
 gx db 0, 8, 183, 61, 91, 202, 37, 51, 58
     db 58, 237, 140, 124, 5, 99, 105
     
-mask dw 77C4h, 72F3h, 7DAAh, 789Dh
+infoCode dw 77C4h, 72F3h, 7DAAh, 789Dh
     dw 662Fh, 6318h, 6C41h, 6976h
+    
+mask dw mask0, mask1, mask2, mask3, mask4, mask5, mask6, mask7
 
 expToNum db 1, 2, 4, 8, 16, 32, 64, 128, 29, 58, 116, 232
     db 205, 135, 19, 38, 76, 152, 45, 90, 180, 117, 234, 201
@@ -38,9 +47,9 @@ expToNum db 1, 2, 4, 8, 16, 32, 64, 128, 29, 58, 116, 232
     db 195, 155, 43, 86, 172, 69, 138, 9, 18, 36, 72, 144
     db 61, 122, 244, 245, 247, 243, 251, 235, 203, 139, 11, 22
     db 44, 88, 176, 125, 250, 233, 207, 131, 27, 54, 108, 216
-    db 173, 71, 142, 1
+    db 173, 71, 142
 
-numToExp db 0; placeholder for 0 indexing
+numToExp db 1; placeholder for 0 indexing, expToNum[255]=1
     db 0, 1, 25, 2, 50, 26, 198, 3, 223, 51, 238, 27
     db 104, 199, 75, 4, 100, 224, 14, 52, 141, 239, 129, 28
     db 193, 105, 248, 200, 8, 76, 113, 5, 138, 101, 47, 225
@@ -69,9 +78,6 @@ stack segment
 ends
 
 code segment
-
-MAX_SIZE equ 53
-CHOSEN_MASK equ 2
 
 drawSplitZ proc
     
@@ -500,6 +506,9 @@ drawPx proc     ; dh input row, dl input col
     mov al, color
 	mov ah, 0ch
 	int 10h
+	
+	call delay
+	
 	pop ax
 	inc cx
 	
@@ -519,6 +528,20 @@ drawPx proc     ; dh input row, dl input col
     ret
 drawPx endp
 
+delay proc
+    push cx
+    push dx
+    
+    mov ah, 86h
+    mov cx, 0
+    mov dx, 1
+    int 15h
+    
+    pop dx
+    pop cx
+    ret
+delay endp
+
 getPx proc     ; dh input row, dl input col
     push cx
     push dx
@@ -528,14 +551,12 @@ getPx proc     ; dh input row, dl input col
     mov ax, 5
     mul dl
     mov cx, ax
-    add cx, 93
-    sub cx, 5
+    add cx, 88
     
     mov ax, 5
     mul dh
     mov dx, ax
-    add dx, 33
-    sub dx, 5
+    add dx, 28
     
 	mov ah, 0dh
 	int 10h
@@ -545,26 +566,236 @@ getPx proc     ; dh input row, dl input col
     ret
 getPx endp
 
-invertCol proc
-    
-    invertPx:
+invertPx proc
+    push ax
+    push cx
+    push dx
     
     call getPx
     xor al, 0Fh
     mov color, al
     call drawPx
-    inc dh
+    
+    pop dx
+    pop cx
+    pop ax
+    ret
+invertPx endp
+
+checkSafe proc
+    push ax
+    
+    mov al, 1
+    
+    cmp dh, 8
+    ja notTopLeft
+    
+    cmp dl, 8
+    ja notTopLeft
+    
+    mov al, 0
+    
+    notTopLeft:
+    
+    cmp dh, 8
+    ja notTopRight
+    
+    cmp dl, 21
+    jb notTopRight
+    
+    mov al, 0
+    
+    notTopRight:
+    
+    cmp dl, 8
+    ja notBottomLeft
+    
+    cmp dh, 21
+    jb notBottomLeft
+    
+    mov al, 0
+    
+    notBottomLeft:
+    
+    cmp dh, 20
+    jb notBottomRight
+    
+    cmp dh, 24
+    ja notBottomRight
+    
+    cmp dl, 20
+    jb notBottomRight
+    
+    cmp dl, 24
+    ja notBottomRight
+    
+    mov al, 0
+    
+    notBottomRight:
     
     cmp dh, 6
-    jne noSkipInvert
-    inc dh
+    jne notHoriBridge
     
-    noSkipInvert:
+    mov al, 0
     
-    loop invertPx
+    notHoriBridge:
     
+    cmp dl, 6
+    jne notVertBridge
+    
+    mov al, 0
+    
+    notVertBridge:
+       
+    cmp al, 1
+    
+    pop ax
     ret
-invertCol endp
+checkSafe endp
+
+mask0 proc
+    push dx
+    
+    add dl, dh
+    and dl, 0001b
+    mov al, dl
+    cmp dl, 0
+    
+    pop dx
+    ret
+mask0 endp
+
+mask1 proc
+    push dx
+             
+    and dh, 0001b
+    cmp al, 0
+    
+    pop dx
+    ret
+mask1 endp
+
+mask2 proc
+    push dx
+    
+    mov ah, 0
+    mov al, dl
+    mov dh, 3
+    div dh
+    cmp ah, 0
+    
+    pop dx
+    ret
+mask2 endp
+
+mask3 proc
+    push dx
+    
+    mov ah, 0
+    mov al, dl
+    add al, dh
+    mov dh, 3
+    div dh
+    cmp ah, 0
+    
+    pop dx
+    ret
+mask3 endp
+
+mask4 proc
+    push dx
+    
+    mov ah, 0
+    mov al, dl
+    mov dl, 3
+    div dl
+    mov ah, 0
+    
+    shr dh, 1
+    
+    add al, dh
+    ror ax, 1
+    cmp ah, 0
+    
+    pop dx
+    ret
+mask4 endp
+
+mask5 proc
+    push dx
+    
+    mov ah, 0
+    mov al, dl
+    mov dl, 3
+    div dl
+    mov al, ah
+    mov ah, 0
+    
+    mul dh
+    
+    mov dx, 3
+    div dl
+    
+    pop dx
+    push dx
+    
+    push ax
+    
+    mov al, dl
+    mul dh
+    
+    and ax, 0001b
+    mov dl, al
+    
+    pop ax
+    
+    add dl, ah
+    mov al, dl
+    
+    cmp dl, 0
+    
+    pop dx
+    ret
+mask5 endp
+
+mask6 proc
+    push dx
+    
+    call mask5
+    and al, 0001b
+    cmp al, 0
+    
+    pop dx
+    ret
+mask6 endp
+
+mask7 proc
+    push dx
+    
+    call mask0
+    push ax
+    
+    mov ah, 0
+    mov al, dl
+    mov dl, 3
+    div dl
+    mov al, ah
+    mov ah, 0
+    
+    mul dh
+    
+    mov dx, 3
+    div dl
+    mov dl, ah
+    
+    pop ax
+    add al, dl
+    and al, 0001b
+    cmp al, 0
+    
+    pop dx
+    ret
+mask7 endp
 
 start:
     mov ax, data
@@ -576,7 +807,85 @@ start:
     
     mov bx, 0
     
-    mov ax, data
+    ; Get Mask Num
+    lea dx, enterMask
+    mov ah, 9
+    int 21h
+    
+    getMask:
+    
+    mov ah, 01h
+    int 16h
+    
+    jz getMask
+    
+    mov ah, 0
+    int 16h
+    
+    cmp al, '0'
+    jb notValidNum
+    
+    cmp al, '7'
+    ja notValidNum
+    
+    validNum:
+    cmp maskNum, 0FFh
+    jne getMask
+    
+    mov maskNum, al
+    
+    mov ah, 0Eh
+    int 10h
+    
+    notValidNum:
+    
+    cmp al, 8               ; Check if backspace pressed
+    jne notMaskBackspace
+    
+    mov ah, 3
+    int 10h
+    
+    cmp dl, 0
+    je atMaskStart
+    mov maskNum, 0FFh
+    
+    dec dl
+    
+    atMaskStart:
+    
+    mov ah, 2
+    int 10h
+    
+    mov ah, 0Ah
+    mov cx, 1
+    mov al, 0
+    int 10h
+    
+    notMaskBackspace:
+    
+    cmp ah, 1Ch
+    jne getMask
+    
+    cmp maskNum , 0FFh
+    je getRandMask
+    
+    
+    sub maskNum, '0'
+    jmp getStr
+    
+    getRandMask: 
+    
+    mov ah, 2Ch
+    int 21h
+    
+    and dh, 0111b
+    
+    mov maskNum, dh
+    
+    
+    ; Get string to convert
+    getStr:
+    
     lea dx, enterStr
     mov ah, 9
     int 21h
@@ -629,7 +938,6 @@ start:
     
     mov ah, 0Ah
     mov cx, 1
-    mov bh, 0
     mov al, 0
     int 10h
     
@@ -640,6 +948,7 @@ start:
     
     cmp strLen, 0
     je endProg
+    
     
     ; shift in mem by 4 bits
     
@@ -860,7 +1169,9 @@ start:
     ; horizontal
     mov dx, 0800h
     
-    mov ax, mask[CHOSEN_MASK*2]
+    mov bl, maskNum
+    shl bl, 1
+    mov ax, infoCode[bx]
     
     shl ax, 1
     
@@ -888,7 +1199,9 @@ start:
     ; vertical
     mov dx, 1C08h
     
-    mov ax, mask[CHOSEN_MASK*2]
+    mov bl, maskNum
+    shl bl, 1
+    mov ax, infoCode[bx]
     
     shl ax, 1
     
@@ -912,58 +1225,38 @@ start:
     toTopPx1:
         
     loop vertInfo
+       
+    mov bl, maskNum
+    shl bl, 1
     
-    ; CHOSEN_MASK = 2
-    mov dl, 09h
-    mov cx, 4   
-    repeat4ColInverts:
-    push cx
+    mov bx, mask[bx]   ; load mask
+    mov dx, 0
     
-    mov dh, 0
-    mov cx, 28
-    call invertCol
+    mov cx, 841
+    drawMask:
     
-    add dl, 3
-    pop cx
-    loop repeat4ColInverts
+    call checkSafe
+    jne skipInvert
     
-    mov dx, 0900h
-    mov cx, 8
-    call invertCol
+    call bx         ; check if invert px
+    jne skipInvert
     
-    mov dx, 0903h
-    mov cx, 12
-    call invertCol
+    call invertPx
     
-    mov dh, 9
-    mov dl, 21
-    mov cx, 11
-    call invertCol
+    skipInvert:
     
-    mov dh, 25
-    mov cx, 4
-    call invertCol
+    inc dl
+    cmp dl, 29
+    jne sameLine
     
-    mov dh, 9
-    mov dl, 24
-    mov cx, 11
-    call invertCol
+    inc dh
+    mov dl, 0
     
-    mov dh, 25
-    mov cx, 4
-    call invertCol
+    sameLine:
     
-    mov dh, 9
-    mov dl, 27
-    mov cx, 20
-    call invertCol
-    
-    
-    jmp endProg
+    loop drawMask
 
-endProg:
-
-
+endProg:    
 mov ax, 4c00h
 int 21h  
 
