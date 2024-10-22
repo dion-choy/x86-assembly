@@ -481,18 +481,8 @@ drawPx proc     ; dh input row, dl input col
     push cx
     push dx
     
-    add dx, 0101h
-    
-    mov ax, 5
-    mul dl
-    mov cx, ax
-    add cx, 93
-    
-    mov ax, 5
-    mul dh
-    mov dx, ax
-    add dx, 33
-    sub dx, 5
+    call convertDXtoDXCX
+	call delay
     
     mov ah, 5
      
@@ -506,8 +496,6 @@ drawPx proc     ; dh input row, dl input col
     mov al, color
 	mov ah, 0ch
 	int 10h
-	
-	call delay
 	
 	pop ax
 	inc cx
@@ -534,7 +522,7 @@ delay proc
     
     mov ah, 86h
     mov cx, 0
-    mov dx, 1
+    mov dx, 2000
     int 15h
     
     pop dx
@@ -542,21 +530,27 @@ delay proc
     ret
 delay endp
 
-getPx proc     ; dh input row, dl input col
-    push cx
-    push dx
-    
+convertDXtoDXCX proc
     add dx, 0101h
     
     mov ax, 5
     mul dl
     mov cx, ax
-    add cx, 88
+    add cx, 93
     
     mov ax, 5
     mul dh
     mov dx, ax
     add dx, 28
+    ret
+convertDXtoDXCX endp
+
+getPx proc     ; dh input row, dl input col
+    push cx
+    push dx
+    
+    call convertDXtoDXCX
+    sub cx, 5
     
 	mov ah, 0dh
 	int 10h
@@ -814,28 +808,28 @@ start:
     
     getMask:
     
-    mov ah, 01h
+    mov ah, 01h         ; check if input buffer
     int 16h
     
     jz getMask
     
-    mov ah, 0
+    mov ah, 0           ; if input buffer, then remove
     int 16h
     
-    cmp al, '0'
+    cmp al, '0'         ; check if character is 0-7
     jb notValidNum
     
     cmp al, '7'
     ja notValidNum
     
     validNum:
-    cmp maskNum, 0FFh
-    jne getMask
+    cmp maskNum, 0FFh   ; check if maskNum written to
+    jne getMask         ; if yes then ignore input
     
-    mov maskNum, al
+    mov maskNum, al     ; if no then write to maskNum
     
     mov ah, 0Eh
-    int 10h
+    int 10h             ; teletype to output
     
     notValidNum:
     
@@ -851,7 +845,7 @@ start:
     
     dec dl
     
-    atMaskStart:
+    atMaskStart:        ; check if at left of screen
     
     mov ah, 2
     int 10h
@@ -974,20 +968,22 @@ start:
     sub bx, 2
     mov cx, 53
     sub cl, strLen
+    shr cl, 1
+    
     jz endAddPadding
     
     addPadding:
     inc bx
-    test cx, 1
-    jz evenCountAddPadding
     mov strIn[bx], 0ECh
-    loop addPadding
-    jmp endAddPadding
     
-    evenCountAddPadding:
+    inc bx
     mov strIn[bx], 011h
     
     loop addPadding
+    
+    inc bx
+    mov strIn[bx], 0ECh
+    
     endAddPadding:
     
     ; end add padding
@@ -1003,7 +999,6 @@ start:
 	mov bl, 0Fh
 	mov cx, 1000
 	int 10h
-	; fill screen white
     
     ; SETUP QR CODE
     mov dx, 0           
@@ -1012,20 +1007,18 @@ start:
     mov dx, 22
     call drawCorner
     
-    shl dx, 8
+    mov dx, 1600h
     call drawCorner
     
-    mov dh, 6
-    mov dl, 6
+    mov dx, 0606h
     mov cx, 7
     drawDottedHori:
     add dl, 2
     call drawPx
     loop drawDottedHori
     
-    mov dh, 6
-    mov dl, 6
-    mov cx, 9
+    mov dx, 0606h
+    mov cx, 7
     drawDottedVert:
     add dh, 2
     call drawPx
@@ -1095,7 +1088,7 @@ start:
     
     
     ; error correction
-    errorCorrection:
+    errorCorrection:        ; uses Reed-Solomon error correction
     
     mov bh, 0
     
@@ -1170,11 +1163,11 @@ start:
     mov dx, 0800h
     
     mov bl, maskNum
-    shl bl, 1
+    shl bl, 1           ; multiply by 2 (due to word size)
     mov ax, infoCode[bx]
     
-    shl ax, 1
-    
+    shl ax, 1       ; error correcting BHL 15 bits only
+                    ; remove leading 0
     mov cx, 15
     horiInfo:
     shl ax, 1
@@ -1225,9 +1218,6 @@ start:
     toTopPx1:
         
     loop vertInfo
-       
-    mov bl, maskNum
-    shl bl, 1
     
     mov bx, mask[bx]   ; load mask
     mov dx, 0
