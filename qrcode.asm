@@ -1,6 +1,8 @@
-MAX_SIZE equ 53
 
-data segment
+org 100h
+
+MAX_SIZE equ 53
+jmp start
 
 enterMask db "Enter mask for QR code[0-7]", 0Dh, 0Ah
     db "(If no number is entered, random mask will be chosen): "
@@ -73,11 +75,7 @@ numToExp db 1; placeholder for 0 indexing, expToNum[255]=1
     db 174, 213, 233, 230, 231, 173, 232, 116, 214, 244, 234, 168
     db 80, 88, 175
 
-stack segment
-    dw   128  dup(0)
-ends
 
-code segment
 
 drawSplitZ proc
     
@@ -792,464 +790,457 @@ mask7 proc
 mask7 endp
 
 start:
-    mov ax, data
-    mov ds, ax
     
-    mov ah, 0
-    mov al, 3
-    int 10h
-    
-    mov bx, 0
-    
-    ; Get Mask Num
-    lea dx, enterMask
-    mov ah, 9
-    int 21h
-    
-    getMask:
-    
-    mov ah, 01h         ; check if input buffer
-    int 16h
-    
-    jz getMask
-    
-    mov ah, 0           ; if input buffer, then remove
-    int 16h
-    
-    cmp al, '0'         ; check if character is 0-7
-    jb notValidNum
-    
-    cmp al, '7'
-    ja notValidNum
-    
-    validNum:
-    cmp maskNum, 0FFh   ; check if maskNum written to
-    jne getMask         ; if yes then ignore input
-    
-    mov maskNum, al     ; if no then write to maskNum
-    
-    mov ah, 0Eh
-    int 10h             ; teletype to output
-    
-    notValidNum:
-    
-    cmp al, 8               ; Check if backspace pressed
-    jne notMaskBackspace
-    
-    mov ah, 3
-    int 10h
-    
-    cmp dl, 0
-    je atMaskStart
-    mov maskNum, 0FFh
-    
-    dec dl
-    
-    atMaskStart:        ; check if at left of screen
-    
-    mov ah, 2
-    int 10h
-    
-    mov ah, 0Ah
-    mov cx, 1
-    mov al, 0
-    int 10h
-    
-    notMaskBackspace:
-    
-    cmp ah, 1Ch
-    jne getMask
-    
-    cmp maskNum , 0FFh
-    je getRandMask
-    
-    
-    sub maskNum, '0'
-    jmp getStr
-    
-    getRandMask: 
-    
-    mov ah, 2Ch
-    int 21h
-    
-    and dh, 0111b
-    
-    mov maskNum, dh
-    
-    
-    ; Get string to convert
-    getStr:
-    
-    lea dx, enterStr
-    mov ah, 9
-    int 21h
-    
-    getInput:
-    
-    mov ah, 01h
-    int 16h
-    
-    jz getInput
-    
-    mov ah, 0
-    int 16h
-    
-    cmp al, 32
-    jb notValidChar
-    
-    validChar:
-    cmp strLen, MAX_SIZE
-    je getInput
-    
-    mov bl, strLen
-    mov strIn[bx], al
-    
-    inc strLen
-    
-    mov ah, 0Eh
-    int 10h
-    
-    
-    notValidChar:
-    
-    cmp al, 8               ; Check if backspace pressed
-    jne notBackspace
-    
-    mov ah, 3
-    int 10h
-    
-    cmp dl, 0
-    je atPageStart
-    dec strLen
-    dec dl
-    
-    mov bl, strLen
-    mov strIn[bx], 0
-    atPageStart:
-    
-    mov ah, 2
-    int 10h
-    
-    mov ah, 0Ah
-    mov cx, 1
-    mov al, 0
-    int 10h
-    
-    notBackspace:
-    
-    cmp ah, 1Ch
-    jne getInput
-    
-    cmp strLen, 0
-    je endProg
-    
-    
-    ; shift in mem by 4 bits
-    
-    mov ah, str
-    mov al, strLen
-    shl ax, 4
-    mov str, ah
-    
-    mov bx, 0
-    shiftBy4Bit:
-    shl ax, 4
-    
-    mov al, strIn[bx]
-    shl ax, 4
-    mov strIn[bx-1], ah
-    
-    inc bx
-    cmp bl, strLen
-    jna shiftBy4Bit
-    
-    ; add padding
-    
-    sub bx, 2
-    mov cx, 53
-    sub cl, strLen
-    shr cl, 1
-    
-    jz endAddPadding
-    
-    addPadding:
-    inc bx
-    mov strIn[bx], 0ECh
-    
-    inc bx
-    mov strIn[bx], 011h
-    
-    loop addPadding
-    
-    inc bx
-    mov strIn[bx], 0ECh
-    
-    endAddPadding:
-    
-    ; end add padding
-    
-    mov al, 13h
-    mov ah, 0
-    int 10h
-    
-    ; fill screen white
-    mov ah, 09
-	mov al, 219
-	mov bh, 0
-	mov bl, 0Fh
-	mov cx, 1000
-	int 10h
-    
-    ; SETUP QR CODE
-    mov dx, 0           
-    call drawCorner
-    
-    mov dx, 22
-    call drawCorner
-    
-    mov dx, 1600h
-    call drawCorner
-    
-    mov dx, 0606h
-    mov cx, 7
-    drawDottedHori:
-    add dl, 2
-    call drawPx
-    loop drawDottedHori
-    
-    mov dx, 0606h
-    mov cx, 7
-    drawDottedVert:
-    add dh, 2
-    call drawPx
-    loop drawDottedVert
-    
-    mov dh, 21
-    mov dl, 8
-    call drawPx
-    
-    call drawSmallCorner
-    
-    ; QR formatting over
-    
-    ; write size
-    mov dh, 28
-    mov dl, 28
-    
-    mov cx, 5
-    call upRectByte
-    
-    inc dh
-    sub dl, 2
-    
-    mov cx, 5
-    call downRectByte
-    
-    dec dh
-    sub dl, 2
-    
-    mov cx, 3
-    call upRectByte
-    
-    call drawIrregL
-    
-    mov cx, 3
-    call downRectByte
-    
-    call drawHoriByteU
-    
-    call drawIrregP
-    
-    mov cx, 4
-    call upZByte
-    
-    mov cx, 2
-    drawCols:
-    push cx
-    
-    call drawZInterIrregD
-    
-    mov cx, 6
-    call downZByte
-    
-    call drawZInterIrregU
-    
-    mov cx, 6
-    call upZByte
-    pop cx
-    loop drawCols
-    
-    call drawZInterIrregD
-    
-    mov cx, 3
-    call downZByte
-    
-    push dx
-    
-    
-    ; error correction
-    errorCorrection:        ; uses Reed-Solomon error correction
-    
-    mov bh, 0
-    
-    mov strPtr, 0
-    
-    mov cx, 55
-    repeat55times:
-    push cx
-    
-    mov bl, strPtr
-    mov di, bx
-    
-    mov bl, str[bx]
-    mov al, numToExp[bx]
-    
-    mov cx, 16
-    multiplyGx:
-    push ax
-    
-    mov bx, cx
-    add al, gx[bx-1]
-    adc al, 0
-    
-    push bx
-    
-    mov bl, al
-    mov al, expToNum[bx]
-    
-    pop bx
-    xor str[bx-1][di], al
-    
-    pop ax
-    loop multiplyGx
-    
-    inc strPtr
-    pop cx
-    loop repeat55times
-    
-    ; end error correction
-    pop dx
-    
-    
-    ; draw error correction str
-    
-    mov strPtr, 55
-    
-    mov cx, 3
-    call downZByte
-    
-    call drawSplitZ
-    
-    mov cx, 2
-    call upZByte
-    
-    call drawZInterIrregD
-    
-    mov cx, 2
-    call downZByte
-    
-    call drawZInterIrregU
-    
-    mov cx, 2
-    call upZByte
-    
-    call drawZInterIrregD
-    
-    mov cx, 2
-    call downZByte
-    
-    ; write error correction level and mask
-    ; horizontal
-    mov dx, 0800h
-    
-    mov bl, maskNum
-    shl bl, 1           ; multiply by 2 (due to word size)
-    mov ax, infoCode[bx]
-    
-    shl ax, 1       ; error correcting BHL 15 bits only
-                    ; remove leading 0
-    mov cx, 15
-    horiInfo:
-    shl ax, 1
-    jnc noHoriBit
-    call drawPx
-    
-    noHoriBit:
-    inc dl
-    
-    cmp dl, 6
-    jne toRightPx
-    inc dl
-    toRightPx:
-    
-    cmp dl, 8
-    jne toRightPx1
-    add dl, 13
-    toRightPx1:
-        
-    loop horiInfo
-    
-    ; vertical
-    mov dx, 1C08h
-    
-    mov bl, maskNum
-    shl bl, 1
-    mov ax, infoCode[bx]
-    
-    shl ax, 1
-    
-    mov cx, 15
-    vertInfo:
-    shl ax, 1
-    jnc noVertBit
-    call drawPx
-    
-    noVertBit:
-    dec dh
-    
-    cmp dh, 21
-    jne toTopPx
-    sub dh, 13
-    toTopPx:
-    
-    cmp dh, 6
-    jne toTopPx1
-    dec dh
-    toTopPx1:
-        
-    loop vertInfo
-    
-    mov bx, mask[bx]   ; load mask
-    mov dx, 0
-    
-    mov cx, 841
-    drawMask:
-    
-    call checkSafe
-    jne skipInvert
-    
-    call bx         ; check if invert px
-    jne skipInvert
-    
-    call invertPx
-    
-    skipInvert:
-    
-    inc dl
-    cmp dl, 29
-    jne sameLine
-    
-    inc dh
-    mov dl, 0
-    
-    sameLine:
-    
-    loop drawMask
+mov ah, 0
+mov al, 3
+int 10h
 
-endProg:    
-mov ax, 4c00h
-int 21h  
+mov bx, 0
 
-ends
+; Get Mask Num
+lea dx, enterMask
+mov ah, 9
+int 21h
 
-end start
+getMask:
+
+mov ah, 01h         ; check if input buffer
+int 16h
+
+jz getMask
+
+mov ah, 0           ; if input buffer, then remove
+int 16h
+
+cmp al, '0'         ; check if character is 0-7
+jb notValidNum
+
+cmp al, '7'
+ja notValidNum
+
+validNum:
+cmp maskNum, 0FFh   ; check if maskNum written to
+jne getMask         ; if yes then ignore input
+
+mov maskNum, al     ; if no then write to maskNum
+
+mov ah, 0Eh
+int 10h             ; teletype to output
+
+notValidNum:
+
+cmp al, 8               ; Check if backspace pressed
+jne notMaskBackspace
+
+mov ah, 3
+int 10h
+
+cmp dl, 0
+je atMaskStart
+mov maskNum, 0FFh
+
+dec dl
+
+atMaskStart:        ; check if at left of screen
+
+mov ah, 2
+int 10h
+
+mov ah, 0Ah
+mov cx, 1
+mov al, 0
+int 10h
+
+notMaskBackspace:
+
+cmp ah, 1Ch
+jne getMask
+
+cmp maskNum , 0FFh
+je getRandMask
+
+
+sub maskNum, '0'
+jmp getStr
+
+getRandMask: 
+
+mov ah, 2Ch
+int 21h
+
+and dh, 0111b
+
+mov maskNum, dh
+
+
+; Get string to convert
+getStr:
+
+lea dx, enterStr
+mov ah, 9
+int 21h
+
+getInput:
+
+mov ah, 01h
+int 16h
+
+jz getInput
+
+mov ah, 0
+int 16h
+
+cmp al, 32
+jb notValidChar
+
+validChar:
+cmp strLen, MAX_SIZE
+je getInput
+
+mov bl, strLen
+mov strIn[bx], al
+
+inc strLen
+
+mov ah, 0Eh
+int 10h
+
+
+notValidChar:
+
+cmp al, 8               ; Check if backspace pressed
+jne notBackspace
+
+mov ah, 3
+int 10h
+
+cmp dl, 0
+je atPageStart
+dec strLen
+dec dl
+
+mov bl, strLen
+mov strIn[bx], 0
+atPageStart:
+
+mov ah, 2
+int 10h
+
+mov ah, 0Ah
+mov cx, 1
+mov al, 0
+int 10h
+
+notBackspace:
+
+cmp ah, 1Ch
+jne getInput
+
+cmp strLen, 0
+je endProg
+
+
+; shift in mem by 4 bits
+
+mov ah, str
+mov al, strLen
+shl ax, 4
+mov str, ah
+
+mov bx, 0
+shiftBy4Bit:
+shl ax, 4
+
+mov al, strIn[bx]
+shl ax, 4
+mov strIn[bx-1], ah
+
+inc bx
+cmp bl, strLen
+jna shiftBy4Bit
+
+; add padding
+
+sub bx, 2
+mov cx, 53
+sub cl, strLen
+shr cl, 1
+
+jz endAddPadding
+
+addPadding:
+inc bx
+mov strIn[bx], 0ECh
+
+inc bx
+mov strIn[bx], 011h
+
+loop addPadding
+
+inc bx
+mov strIn[bx], 0ECh
+
+endAddPadding:
+
+; end add padding
+
+mov al, 13h
+mov ah, 0
+int 10h
+
+; fill screen white
+mov ah, 09
+mov al, 219
+mov bh, 0
+mov bl, 0Fh
+mov cx, 1000
+int 10h
+
+; SETUP QR CODE
+mov dx, 0           
+call drawCorner
+
+mov dx, 22
+call drawCorner
+
+mov dx, 1600h
+call drawCorner
+
+mov dx, 0606h
+mov cx, 7
+drawDottedHori:
+add dl, 2
+call drawPx
+loop drawDottedHori
+
+mov dx, 0606h
+mov cx, 7
+drawDottedVert:
+add dh, 2
+call drawPx
+loop drawDottedVert
+
+mov dh, 21
+mov dl, 8
+call drawPx
+
+call drawSmallCorner
+
+; QR formatting over
+
+; write size
+mov dh, 28
+mov dl, 28
+
+mov cx, 5
+call upRectByte
+
+inc dh
+sub dl, 2
+
+mov cx, 5
+call downRectByte
+
+dec dh
+sub dl, 2
+
+mov cx, 3
+call upRectByte
+
+call drawIrregL
+
+mov cx, 3
+call downRectByte
+
+call drawHoriByteU
+
+call drawIrregP
+
+mov cx, 4
+call upZByte
+
+mov cx, 2
+drawCols:
+push cx
+
+call drawZInterIrregD
+
+mov cx, 6
+call downZByte
+
+call drawZInterIrregU
+
+mov cx, 6
+call upZByte
+pop cx
+loop drawCols
+
+call drawZInterIrregD
+
+mov cx, 3
+call downZByte
+
+push dx
+
+
+; error correction
+errorCorrection:        ; uses Reed-Solomon error correction
+
+mov bh, 0
+
+mov strPtr, 0
+
+mov cx, 55
+repeat55times:
+push cx
+
+mov bl, strPtr
+mov di, bx
+
+mov bl, str[bx]
+mov al, numToExp[bx]
+
+mov cx, 16
+multiplyGx:
+push ax
+
+mov bx, cx
+add al, gx[bx-1]
+adc al, 0
+
+push bx
+
+mov bl, al
+mov al, expToNum[bx]
+
+pop bx
+xor str[bx-1][di], al
+
+pop ax
+loop multiplyGx
+
+inc strPtr
+pop cx
+loop repeat55times
+
+; end error correction
+pop dx
+
+
+; draw error correction str
+
+mov strPtr, 55
+
+mov cx, 3
+call downZByte
+
+call drawSplitZ
+
+mov cx, 2
+call upZByte
+
+call drawZInterIrregD
+
+mov cx, 2
+call downZByte
+
+call drawZInterIrregU
+
+mov cx, 2
+call upZByte
+
+call drawZInterIrregD
+
+mov cx, 2
+call downZByte
+
+; write error correction level and mask
+; horizontal
+mov dx, 0800h
+
+mov bl, maskNum
+shl bl, 1           ; multiply by 2 (due to word size)
+mov ax, infoCode[bx]
+
+shl ax, 1       ; error correcting BHL 15 bits only
+                ; remove leading 0
+mov cx, 15
+horiInfo:
+shl ax, 1
+jnc noHoriBit
+call drawPx
+
+noHoriBit:
+inc dl
+
+cmp dl, 6
+jne toRightPx
+inc dl
+toRightPx:
+
+cmp dl, 8
+jne toRightPx1
+add dl, 13
+toRightPx1:
+    
+loop horiInfo
+
+; vertical
+mov dx, 1C08h
+
+mov bl, maskNum
+shl bl, 1
+mov ax, infoCode[bx]
+
+shl ax, 1
+
+mov cx, 15
+vertInfo:
+shl ax, 1
+jnc noVertBit
+call drawPx
+
+noVertBit:
+dec dh
+
+cmp dh, 21
+jne toTopPx
+sub dh, 13
+toTopPx:
+
+cmp dh, 6
+jne toTopPx1
+dec dh
+toTopPx1:
+    
+loop vertInfo
+
+mov bx, mask[bx]   ; load mask
+mov dx, 0
+
+mov cx, 841
+drawMask:
+
+call checkSafe
+jne skipInvert
+
+call bx         ; check if invert px
+jne skipInvert
+
+call invertPx
+
+skipInvert:
+
+inc dl
+cmp dl, 29
+jne sameLine
+
+inc dh
+mov dl, 0
+
+sameLine:
+
+loop drawMask
+
+endProg:
+ret
