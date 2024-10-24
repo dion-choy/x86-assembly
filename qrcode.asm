@@ -11,7 +11,7 @@ enterStr db 0Dh, 0Ah, "Enter text to change to QR code: "
     db 0Dh, 0Ah, '$'
 
 str db 4
-  db 0
+    db 0
 strIn db MAX_SIZE DUP(0)
 remainder db 15 DUP(0)
 strPtr db 0
@@ -429,33 +429,35 @@ drawCorner proc
     push dx
     push cx
     
-    call drawPx
-    mov cx, 6   
+    mov cx, 2
+    twiceTopBottom:
+    push cx
+    mov cx, 7   
     drawCornerTop:
+    call drawPx
     inc dl
-    call drawPx
     loop drawCornerTop
+    sub dl, 7
+    add dh, 6
+    pop cx
+    loop twiceTopBottom
+    sub dh, 7
     
-    mov cx, 6   
-    drawCornerRight:
-    inc dh
-    call drawPx
-    loop drawCornerRight
-    
-    mov cx, 6   
-    drawCornerBottom:
-    dec dl
-    call drawPx
-    loop drawCornerBottom
-    
-    mov cx, 5   
+    mov cx, 2
     drawCornerLeft:
-    dec dh
+    push cx
+    mov cx, 5   
+    drawCornerRight:
     call drawPx
+    dec dh
+    loop drawCornerRight
+    add dl, 6
+    add dh, 5
+    pop cx
     loop drawCornerLeft
     
-    inc dh
-    add dl, 2   
+    sub dh, 3
+    sub dl, 10   
     mov cx, 3
     drawCenterOuter:
     push cx
