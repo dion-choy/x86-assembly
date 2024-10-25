@@ -2,6 +2,7 @@
 org 100h
 
 MAX_SIZE equ 53
+QR_SIZE equ 28
 jmp start
 
 enterMask db "Enter mask for QR code[0-7]", 0Dh, 0Ah
@@ -136,10 +137,10 @@ writeWords proc
     
     sameColUp:
     
-    cmp dh, 29
+    cmp dh, QR_SIZE+1
     jne sameColDown
 
-    mov dh, 28
+    mov dh, QR_SIZE
     sub dl, 2
 
     mov moveUpDown, 0FFh
@@ -165,12 +166,12 @@ writeWords endp
 
 
 drawSmallCorner proc
-    mov dh, 22
-    mov dl, 22
+    mov dh, QR_SIZE-6
+    mov dl, QR_SIZE-6
     call drawPx
     
-    mov dh, 20
-    mov dl, 20
+    mov dh, QR_SIZE-8
+    mov dl, QR_SIZE-8
     mov cx, 4
     drawSmallCornerTop:
     call drawPx
@@ -367,7 +368,7 @@ checkSafe proc
     cmp dh, 8
     ja notTopRight
     
-    cmp dl, 21
+    cmp dl, QR_SIZE-7
     jb notTopRight
     
     mov al, 0
@@ -377,23 +378,23 @@ checkSafe proc
     cmp dl, 8
     ja notBottomLeft
     
-    cmp dh, 21
+    cmp dh, QR_SIZE-7
     jb notBottomLeft
     
     mov al, 0
     
     notBottomLeft:
     
-    cmp dh, 20
+    cmp dh, QR_SIZE-8
     jb notBottomRight
     
-    cmp dh, 24
+    cmp dh, QR_SIZE-4
     ja notBottomRight
     
-    cmp dl, 20
+    cmp dl, QR_SIZE-8
     jb notBottomRight
     
-    cmp dl, 24
+    cmp dl, QR_SIZE-4
     ja notBottomRight
     
     mov al, 0
@@ -776,27 +777,28 @@ int 10h
 mov dx, 0
 call drawCorner
 
-mov dx, 22
+mov dx, QR_SIZE-6
 call drawCorner
 
-mov dx, 1600h
+mov dh, QR_SIZE-6
+mov dl, 0
 call drawCorner
 
 mov dx, 0606h
-mov cx, 7
+mov cx, (QR_SIZE-14)/2
 drawDottedHori:
 add dl, 2
 call drawPx
 loop drawDottedHori
 
 mov dx, 0606h
-mov cx, 7
+mov cx, (QR_SIZE-14)/2
 drawDottedVert:
 add dh, 2
 call drawPx
 loop drawDottedVert
 
-mov dh, 21
+mov dh, QR_SIZE-7
 mov dl, 8
 call drawPx
 
@@ -805,8 +807,8 @@ call drawSmallCorner
 ; QR formatting over
 
 ; write size
-mov dh, 28
-mov dl, 28
+mov dh, QR_SIZE
+mov dl, QR_SIZE
 
 mov cx, 55
 call writeWords
@@ -912,7 +914,7 @@ call drawPx
 noVertBit:
 dec dh
 
-cmp dh, 21
+cmp dh, QR_SIZE-7
 jne toTopPx
 sub dh, 13
 toTopPx:
@@ -941,7 +943,7 @@ call invertPx
 skipInvert:
 
 inc dl
-cmp dl, 29
+cmp dl, QR_SIZE+1
 jne sameLine
 
 inc dh
