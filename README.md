@@ -102,44 +102,44 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
 
 #### minesweeper.asm
 
-    -   Minesweeper Game
+-   Minesweeper Game
 
-        -   Left click digs tile
-        -   Right click places flag
+    -   Left click digs tile
+    -   Right click places flag
 
-    -   Chord clicking
+-   Chord clicking
 
-        -   If a numbered tile with the same number of flags surrounding is clicked, all neighbouring tiles except flagged tiles will be revealed
+    -   If a numbered tile with the same number of flags surrounding is clicked, all neighbouring tiles except flagged tiles will be revealed
 
-    -   Win condition:
+-   Win condition:
 
-        -   Only mines remaining in field (Either flagged or unflagged)
+    -   Only mines remaining in field (Either flagged or unflagged)
 
-    -   Lose condition:
+-   Lose condition:
 
-        -   Digging on a mine tile
+    -   Digging on a mine tile
 
-    **_Program_**
+**_Program_**
 
-    -   Pseudo-random number generator
+-   Pseudo-random number generator
 
-        -   Uses system time to generate coordinates for mines
-        -   Checks to ensure the tile is not preoccupied
+    -   Uses system time to generate coordinates for mines
+    -   Checks to ensure the tile is not preoccupied
 
-    -   Uses multiple pages
+-   Uses multiple pages
 
-        -   Main page displays dug tiles
-        -   Secondary page hides generated minefield
+    -   Main page displays dug tiles
+    -   Secondary page hides generated minefield
 
-    -   When tile is dug:
+-   When tile is dug:
 
-        -   Tile copied from secondary to main page
-        -   Counter of number of dug blocks incremented
+    -   Tile copied from secondary to main page
+    -   Counter of number of dug blocks incremented
 
-    -   Recursive flood fill algorithm reveals neighbouring tiles if '0'
+-   Recursive flood fill algorithm reveals neighbouring tiles if '0'
 
-        -   Checks from top row to bottom row
-        -   If any neighbouring tile is '0', call procedure again
+    -   Checks from top row to bottom row
+    -   If any neighbouring tile is '0', call procedure again
 
 #### flappyBird.asm
 
