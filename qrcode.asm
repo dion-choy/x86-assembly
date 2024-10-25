@@ -17,6 +17,9 @@ remainder db 15 DUP(0)
 strPtr db 0
 strLen db 0
 
+moveUpDown db 0FFh
+column db 0
+
 color db 0
 maskNum db 0FFh
 
@@ -77,318 +80,88 @@ numToExp db 1; placeholder for 0 indexing, expToNum[255]=1
 
 
 
-drawSplitZ proc
-    
-    mov bl, strPtr
-    mov al, str[bx]
-    
-    mov cx, 6
-    call downZBit
-    
-    mov cx, 1
-    call upZBit
-    
-    sub dh, 8
-    
-    mov cx, 1
-    call upZBit
-    
-    inc strPtr
-    
-    ret
-drawSplitZ endp
-    
-drawZInterIrregU proc
-    
-    mov bl, strPtr
-    mov al, str[bx]
-    
-    mov cx, 6
-    call downZBit
-    
-    mov cx, 2
-    call upRectBit
-    
-    inc dh
-    sub dl, 2
-    
-    inc strPtr
-    
-    ret
-drawZInterIrregU endp
+writeBit proc
 
-drawZInterIrregD proc
+    shl al, 1
+    jnc noPx
+    call drawPx
     
-    mov bl, strPtr
-    mov al, str[bx]
-    
-    mov cx, 6
-    call upZBit
-    
-    mov cx, 2
-    call upRectBit
-    
-    sub dl, 2
-    inc dh
-    
-    inc strPtr
-    
-    ret
-drawZInterIrregD endp
+    noPx:
 
-downZByte proc
+    ret
+writeBit endp
+
+writeWords proc
     
-    writeDownZBytes:
+    writeWordsLoop:
     push cx
+
     mov bl, strPtr
     mov al, str[bx]
+
     mov cx, 8
-    call downZBit
-    inc strPtr
-    pop cx
-    loop writeDownZBytes
-    
-    ret
-downZByte endp
+    writeByte:
+    call checkSafe
+    jne skipBit
 
-downZBit proc
+    call writeBit
+    dec cx
     
-    writeDownZChar:
-    shl al, 1
-    jnc noDownZ
-    call drawPx
-    
-    noDownZ:
-    
-    test cx, 1
-    jz evenDownZ
-    dec dl
-    jmp endDownZ
-    
-    evenDownZ:
+    skipBit:
+    inc cx
+
+    test column, 1
+    jz goLeft
+
     inc dl
-    inc dh
-    endDownZ:
+    add dh, moveUpDown
     
-    cmp dh, 6
-    jne skipSplitDownZ
+    dec column
     
-    inc dh
+    jmp endUpCheck
     
-    skipSplitDownZ:
-    loop writeDownZChar
-    
-    ret
-downZBit endp
-
-upZByte proc
-    
-    writeUpZBytes:
-    push cx
-    mov bl, strPtr
-    mov al, str[bx]
-    mov cx, 8
-    call upZBit
-    inc strPtr
-    pop cx
-    loop writeUpZBytes
-    
-    ret
-upZByte endp
-
-upZBit proc
-    
-    writeUpZChar:
-    shl al, 1
-    jnc noUpZ
-    call drawPx
-    
-    noUpZ:
-    
-    test cx, 1
-    jz evenUpZ
+    goLeft:
     dec dl
-    jmp endUpZ
+    inc column
     
-    evenUpZ:
-    inc dl
-    dec dh
-    endUpZ:
-    
-    cmp dh, 6
-    jne skipSplitUpZ
-    
-    dec dh
-    
-    skipSplitUpZ:
-    loop writeUpZChar
-    
-    ret
-upZBit endp
+    endUpCheck:
 
-drawIrregP proc
+    cmp dh, 0FFh
+    jne sameColUp
     
-    mov bl, strPtr
-    mov al, str[bx]
-    
-    mov cx, 4
-    call upZBit
-    
-    dec dl
-    
-    mov cx, 4
-    writeIrregP:
-    
-    shl al, 1
-    jnc noIrregP
-    call drawPx
-    
-    noIrregP:
-    
-    dec dh
-    loop writeIrregP
-    
-    inc strPtr
-    
-    ret
-drawIrregP endp
-
-drawIrregL proc
-    
-    mov bl, strPtr
-    mov al, str[bx]
-    
-    mov cx, 6
-    call upRectBit
-    
+    mov dh, 0
     sub dl, 2
-    inc dh
-    
-    mov cx, 2
-    call downRectBit
-    
-    inc strPtr
-    
-    ret
-drawIrregL endp
 
-drawHoriByteU proc  ; U represents starting from top(Up)
+    mov moveUpDown, 1
     
-    mov bl, strPtr
-    mov al, str[bx]
+    sameColUp:
+    
+    cmp dh, 29
+    jne sameColDown
 
-    mov cx, 4
-    call downRectBit
-    
+    mov dh, 28
     sub dl, 2
-    dec dh
-    
-    mov cx, 4
-    call upRectBit
-    
-    inc strPtr
-    
-    ret
-drawHoriByteU endp
 
-downRectByte proc
+    mov moveUpDown, 0FFh
     
-    writeDownRectBytes:
-    push cx
-    mov bl, strPtr
-    mov al, str[bx]
-    mov cx, 8
-    call downRectBit
+    sameColDown:
+    
+    cmp dl, 6
+    jne notAtBridge
+    
+    dec dl
+    
+    notAtBridge:
+
+    loop writeByte
+
     inc strPtr
+
     pop cx
-    loop writeDownRectBytes
-    
-    ret
-downRectByte endp
-
-downRectBit proc
-    
-    writeDownVertChar:
-    
-    shl al, 1
-    jnc noDownVertPx
-    call drawPx
-    
-    noDownVertPx:
-    
-    test cx, 1
-    jz evenDownVertCount
-    inc dh
-    inc dl
-    jmp endDownVertCheck
-    evenDownVertCount:
-    dec dl
-    endDownVertCheck:
-    
-    cmp dx, 1416h
-    jne skipSplitVertDown
-    
-    add dh, 5
-    
-    skipSplitVertDown:
-    
-    loop writeDownVertChar
-    
-    ret
-downRectBit endp
-
-upRectByte proc
-    
-    writeUpRectBytes:
-    push cx
-    mov bl, strPtr
-    mov al, str[bx]
-    mov cx, 8
-    call upRectBit
-    inc strPtr
-    pop cx
-    loop writeUpRectBytes
-    
-    ret
-upRectByte endp
-
-upRectBit proc
-    
-    writeUpVertChar:
-    
-    shl al, 1
-    jnc noUpVertPx
-    call drawPx
-    
-    noUpVertPx:
-    
-    test cx, 1
-    jz evenUpVertCount
-    dec dh
-    inc dl
-    jmp endUpVertCheck
-    evenUpVertCount:
-    dec dl
-    endUpVertCheck:
-    
-    cmp dx, 1818h
-    jne skipSplitVertUp
-    
-    sub dh, 5
-    
-    skipSplitVertUp:
-    
-    cmp dx, 0906h
-    jne skipSplitHori
-    
-    dec dl
-    
-    skipSplitHori:
-    
-    loop writeUpVertChar
+    loop writeWordsLoop
 
     ret
-upRectBit endp
+writeWords endp
 
 
 drawSmallCorner proc
@@ -998,8 +771,9 @@ mov bl, 0Fh
 mov cx, 1000
 int 10h
 
+
 ; SETUP QR CODE
-mov dx, 0           
+mov dx, 0
 call drawCorner
 
 mov dx, 22
@@ -1034,56 +808,9 @@ call drawSmallCorner
 mov dh, 28
 mov dl, 28
 
-mov cx, 5
-call upRectByte
-
-inc dh
-sub dl, 2
-
-mov cx, 5
-call downRectByte
-
-dec dh
-sub dl, 2
-
-mov cx, 3
-call upRectByte
-
-call drawIrregL
-
-mov cx, 3
-call downRectByte
-
-call drawHoriByteU
-
-call drawIrregP
-
-mov cx, 4
-call upZByte
-
-mov cx, 2
-drawCols:
-push cx
-
-call drawZInterIrregD
-
-mov cx, 6
-call downZByte
-
-call drawZInterIrregU
-
-mov cx, 6
-call upZByte
-pop cx
-loop drawCols
-
-call drawZInterIrregD
-
-mov cx, 3
-call downZByte
-
+mov cx, 55
+call writeWords
 push dx
-
 
 ; error correction
 errorCorrection:        ; uses Reed-Solomon error correction
@@ -1133,28 +860,8 @@ pop dx
 
 mov strPtr, 55
 
-mov cx, 3
-call downZByte
-
-call drawSplitZ
-
-mov cx, 2
-call upZByte
-
-call drawZInterIrregD
-
-mov cx, 2
-call downZByte
-
-call drawZInterIrregU
-
-mov cx, 2
-call upZByte
-
-call drawZInterIrregD
-
-mov cx, 2
-call downZByte
+mov cx, 15
+call writeWords
 
 ; write error correction level and mask
 ; horizontal
