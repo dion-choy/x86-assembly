@@ -164,7 +164,6 @@ writeWords proc
     ret
 writeWords endp
 
-
 drawSmallCorner proc
     mov dh, QR_SIZE-6
     mov dl, QR_SIZE-6
@@ -421,7 +420,7 @@ checkSafe proc
     ret
 checkSafe endp
 
-mask0 proc
+mask0 proc      ; (x+y)%2=0
     push dx
     
     add dl, dh
@@ -433,7 +432,7 @@ mask0 proc
     ret
 mask0 endp
 
-mask1 proc
+mask1 proc      ; y%2=0
     push dx
              
     and dh, 0001b
@@ -443,7 +442,7 @@ mask1 proc
     ret
 mask1 endp
 
-mask2 proc
+mask2 proc      ; x%3=0
     push dx
     
     mov ah, 0
@@ -456,7 +455,7 @@ mask2 proc
     ret
 mask2 endp
 
-mask3 proc
+mask3 proc      ; (x+y)%3=0
     push dx
     
     mov ah, 0
@@ -470,7 +469,7 @@ mask3 proc
     ret
 mask3 endp
 
-mask4 proc
+mask4 proc      ; (x/3+y/2)%2=0
     push dx
     
     mov ah, 0
@@ -489,7 +488,7 @@ mask4 proc
     ret
 mask4 endp
 
-mask5 proc
+mask5 proc      ; xy%2+xy%3=0
     push dx
     
     mov ah, 0
@@ -526,7 +525,7 @@ mask5 proc
     ret
 mask5 endp
 
-mask6 proc
+mask6 proc      ; (xy%2+xy%3)%2=0
     push dx
     
     call mask5
@@ -537,7 +536,7 @@ mask6 proc
     ret
 mask6 endp
 
-mask7 proc
+mask7 proc      ; ((x+y)%2+xy%3)%2=0
     push dx
     
     call mask0
@@ -774,10 +773,10 @@ int 10h
 
 
 ; SETUP QR CODE
-mov dx, 0
+mov dx, 0           ; draw top right corner
 call drawCorner
 
-mov dx, QR_SIZE-6
+mov dx, QR_SIZE-6   ; draw top left corner
 call drawCorner
 
 mov dh, QR_SIZE-6
@@ -786,14 +785,14 @@ call drawCorner
 
 mov dx, 0606h
 mov cx, (QR_SIZE-14)/2
-drawDottedHori:
+drawDottedHori:     ; draw horizontal timing dotted line
 add dl, 2
 call drawPx
 loop drawDottedHori
 
 mov dx, 0606h
 mov cx, (QR_SIZE-14)/2
-drawDottedVert:
+drawDottedVert:     ; draw vertical timing dotted line
 add dh, 2
 call drawPx
 loop drawDottedVert
@@ -821,31 +820,31 @@ mov bh, 0
 
 mov strPtr, 0
 
-mov cx, 55
+mov cx, 55      ; run error correction algorithm on D words
 repeat55times:
 push cx
 
 mov bl, strPtr
 mov di, bx
 
-mov bl, str[bx]
-mov al, numToExp[bx]
+mov bl, str[bx]         ; change D word to exponent
+mov al, numToExp[bx]    ; for easier multiplication
 
-mov cx, 16
+mov cx, 16      ; repeat E words + 1 time
 multiplyGx:
 push ax
 
 mov bx, cx
-add al, gx[bx-1]
-adc al, 0
+add al, gx[bx-1]    ; MOD 255 using natural 8bit overflow
+adc al, 0           ; add back carry
 
 push bx
 
 mov bl, al
-mov al, expToNum[bx]
+mov al, expToNum[bx]    ; convert exponent to num
 
 pop bx
-xor str[bx-1][di], al
+xor str[bx-1][di], al   ; xor with D word
 
 pop ax
 loop multiplyGx
@@ -876,7 +875,7 @@ mov ax, infoCode[bx]
 shl ax, 1       ; error correcting BHL 15 bits only
                 ; remove leading 0
 mov cx, 15
-horiInfo:
+horiInfo:       ; draw horizontal 15 bit info code
 shl ax, 1
 jnc noHoriBit
 call drawPx
@@ -897,7 +896,7 @@ toRightPx1:
 loop horiInfo
 
 ; vertical
-mov dx, 1C08h
+mov dx, 1C08h   ; draw vertical 15 bit info code
 
 mov bl, maskNum
 shl bl, 1
@@ -929,7 +928,7 @@ loop vertInfo
 mov bx, mask[bx]   ; load mask
 mov dx, 0
 
-mov cx, 841
+mov cx, (QR_SIZE+1)*(QR_SIZE+1)
 drawMask:
 
 call checkSafe

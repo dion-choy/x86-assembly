@@ -17,6 +17,7 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
 -   [pong.asm](#pongasm)
 -   [minesweeper.asm](#minesweeperasm)
 -   [flappyBird.asm](#flappybirdasm)
+-   [qrcode.asm](#qrcodeasm)
 
 ## Brief Overview
 
@@ -99,7 +100,7 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
 
         -   Compare height of ball with height of paddles
 
-    #### minesweeper.asm
+#### minesweeper.asm
 
     -   Minesweeper Game
 
@@ -165,3 +166,20 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
     -   Flapping wing:
         -   Change velocity to upwards 3 char/frame
         -   Gravity makes a smoother arc
+
+#### qrcode.asm
+
+-   QR Code Generator
+
+    **_Program_**
+
+    -   Translates text input to ASCII representation in bits
+    -   Draws in a snake fahsion within the QR Code
+
+    -   Error Correction
+
+        -   Reed Solomon Code
+        -   [Algorithm](https://www.thonky.com/qr-code-tutorial/error-correction-coding)
+
+    -   Masks 0-7 implemented
+        -   If mask not inputted, randomly chosen
