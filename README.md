@@ -1,6 +1,6 @@
 # x86 Assembly
 
-### These files have been created and debugged in EMU8086
+### These files have been created and debugged in [EMU8086](./emu8086/)
 
 [Documentation for EMU8086](https://yassinebridi.github.io/asm-docs/) \
 Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
