@@ -1,5 +1,15 @@
 # Changes from EMU8086 to TASM
 
+### Conditional Jump
+
+_EMU8086_
+
+-   No Jump limit
+
+_TASM_
+
+-   -127/+128 bytes
+
 ### EXE Program boilerplate:
 
 _EMU8086_
