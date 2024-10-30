@@ -55,7 +55,7 @@ call drawInitial        ; draw initial left paddle
 mov dl, 4Fh             ; pass position of right paddle
 mov dh, rightPos
 call drawInitial        ; draw initial left paddle
-jmp resetBall:
+jmp resetBall
 
 again:
 call drawBall           ; draw ball
