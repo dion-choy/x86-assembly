@@ -8,7 +8,7 @@ right equ 4dh
 up equ 48h
 down equ 50h
 
-focal equ 50
+focal dw 50
 
 angleLookup db 45, 26, 14, 7, 3, 2, 1
 
@@ -761,7 +761,7 @@ pushBuffer proc
     
     cld
     
-    mov ax, 0B000h
+    mov ax, 09000h
     mov ds, ax
     
     mov ax, 0A000h
@@ -773,10 +773,10 @@ pushBuffer proc
     mov cx, 07D00h
     rep movsw
     
-    mov ax, 09000h
+    mov ax, 08000h
     mov ds, ax
     
-    mov ax, 0B000h
+    mov ax, 09000h
     mov es, ax
     
     mov si, 0
@@ -798,7 +798,7 @@ writeToBuffer proc
     push bx
     push dx
     
-    mov ax, 0B000h
+    mov ax, 09000h
     mov es, ax
     
     mov bx, dx  ; multiply dx by 320, put in bx
