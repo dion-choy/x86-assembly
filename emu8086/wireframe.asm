@@ -78,14 +78,20 @@ connections dw point1, point2
     dw point15, point14
     dw point15, point18
 
+;pointsLen equ 1
+;point1 dw 0,0,0
+;
+;connLen equ 1
+;connections dw point1, point1
+;
 pointTranslate dw pointsLen*3 DUP(0)
 
 start:
-call rotateY
 
 mov ah, 0
 mov al, 13h
 int 10h
+
 call initBuffer
 call initTranslateCache
 
@@ -556,7 +562,6 @@ applyRotate proc    ; ax: first coord, bx: second coord
 applyRotate endp
 ; ^^^^^ ===== Axis Rotation Code ===== ^^^^^
 
-
 ; vvvvv ===== Translation Code ===== vvvvv
 changePoints proc   ; ax: change in x, bx: change in y
     push di         ; dx: change in z
@@ -582,9 +587,10 @@ changePoints proc   ; ax: change in x, bx: change in y
 changePoints endp
 ; ^^^^^ ===== X, Y, Z Translation Code ===== ^^^^^
 
+; vvvvv ===== Point projection code ===== vvvvv
 calcProj proc       ; Move address of point into BX
-    ; Xproj = x*focal/z
-    ; Yproj = y*focal/z
+    ; Xproj = x*focal/(z+focal)
+    ; Yproj = y*focal/(z+focal)
     push cx
     push dx
     
@@ -593,6 +599,11 @@ calcProj proc       ; Move address of point into BX
     mov cx, [bx][2*2]     ; z-coord of point
     
     add cx, focal
+    jns inFrontOfCam
+    
+    mov cx, 4
+    
+    inFrontOfCam:
     
     cmp cx, 0
     jg noDivideError
@@ -621,7 +632,9 @@ calcProj proc       ; Move address of point into BX
     pop dx
     ret         ; return x-coord at AX
 calcProj endp   ; return y-coord at BX
+; ^^^^^ ===== Point projection code ===== ^^^^^
 
+; vvvvv ===== Line drawing code ===== vvvvv
 drawLine proc       ; Bresenham's line algorithm 
     
     push ax
@@ -741,7 +754,6 @@ drawPx proc
     jae skipPx
     
     mov al, color
-    mov ah, 0ch
     call writeToBuffer
     
     skipPx:
@@ -751,7 +763,9 @@ drawPx proc
     pop ax   
     ret
 drawPx endp
+; ^^^^^ ===== Line drawing code ===== ^^^^^
 
+; vvvvv ===== Single buffer code ===== vvvvv
 pushBuffer proc
     push di
     push si
@@ -846,6 +860,7 @@ initBuffer proc
     pop di
     ret
 initBuffer endp
+; ^^^^^ ===== Single buffer code ===== ^^^^^
 
 initTranslateCache proc
     push si
