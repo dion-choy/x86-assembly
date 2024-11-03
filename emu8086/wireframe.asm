@@ -53,7 +53,7 @@ object1 dw 8    ; number of points
     dw -40, -20, 80
     dw -40, -20, 40
     
-    dw 12   ; number of connection
+    dw 12   ; number of connections
     
     dw 1, 2
     dw 1, 4
@@ -81,7 +81,7 @@ object2 dw 8    ; number of points
     dw 30, -10, 20
     dw 30, -10, 0
 
-    dw 12   ; number of connection
+    dw 12   ; number of connections
     
     dw 1, 2
     dw 1, 4
@@ -371,8 +371,7 @@ writeInitial proc   ; di is input of object to copy points
     ret
 writeInitial endp
 
-checkAngle proc
-    
+checkAngle proc     ; Change change to range -180 <= x <= 180
     cmp xAngle, 180
     jl xBelow180
     sub xAngle, 360
