@@ -10,11 +10,14 @@ down equ 50h
 
 focal dw 50
 
+; angle lookup for CORDIC algorithm
 angleLookup db 45, 26, 14, 7, 3, 2, 1
 
 exitFlag db 0
 color db 1110b
 
+
+; vvvv variables for line drawing
 startXPos dw 0
 startYPos dw 0
 
@@ -26,78 +29,127 @@ cursorYPos dw 0
 
 yIncDec dw 0
 xIncDec dw 0
+; ^^^^ variables for line drawing
+
+xTrans dw 0
+yTrans dw 0
+zTrans dw 0
 
 xAngle dw 0
 yAngle dw 0
 zAngle dw 0
 
-pointsLen equ 16
+objLen dw 3
+objects dw object1, object2, object3
 
-point1 dw -80, -20, 40
-point2 dw -80, -20, 80
-point3 dw -80, 20, 80
-point4 dw -80, 20, 40
-point5 dw -40, 20, 40
-point6 dw -40, 20, 80
-point7 dw -40, -20, 80
-point8 dw -40, -20, 40
-
-point11 dw 50, -10, 0
-point12 dw 50, -10, 20
-point13 dw 50, 10, 20
-point14 dw 50, 10, 0
-point15 dw 30, 10, 0
-point16 dw 30, 10, 20
-point17 dw 30, -10, 20
-point18 dw 30, -10, 0
-
-connLen equ 24
-connections dw point1, point2
-    dw point1, point4
-    dw point1, point8
-    dw point6, point3
-    dw point6, point5
-    dw point6, point7
-    dw point3, point2
-    dw point3, point4
-    dw point7, point2
-    dw point7, point8
-    dw point5, point4
-    dw point5, point8
+object1 dw 8    ; number of points
+    dw 1110b    ; color
     
-    dw point11, point12
-    dw point11, point14
-    dw point11, point18
-    dw point16, point13
-    dw point16, point15
-    dw point16, point17
-    dw point13, point12
-    dw point13, point14
-    dw point17, point12
-    dw point17, point18
-    dw point15, point14
-    dw point15, point18
+    dw -80, -20, 40
+    dw -80, -20, 80
+    dw -80, 20, 80
+    dw -80, 20, 40
+    dw -40, 20, 40
+    dw -40, 20, 80
+    dw -40, -20, 80
+    dw -40, -20, 40
+    
+    dw 12   ; number of connection
+    
+    dw 1, 2
+    dw 1, 4
+    dw 1, 8
+    dw 6, 3
+    dw 6, 5
+    dw 6, 7
+    dw 3, 2
+    dw 3, 4
+    dw 7, 2
+    dw 7, 8
+    dw 5, 4
+    dw 5, 8
+obj1Init dw 30*3 DUP(0)
+    
+object2 dw 8    ; number of points
+    dw 1110b    ; color
+    
+    dw 50, -10, 0
+    dw 50, -10, 20
+    dw 50, 10, 20
+    dw 50, 10, 0
+    dw 30, 10, 0
+    dw 30, 10, 20
+    dw 30, -10, 20
+    dw 30, -10, 0
 
-;pointsLen equ 1
-;point1 dw 0,0,0
-;
-;connLen equ 1
-;connections dw point1, point1
-;
-pointTranslate dw pointsLen*3 DUP(0)
+    dw 12   ; number of connection
+    
+    dw 1, 2
+    dw 1, 4
+    dw 1, 8
+    dw 6, 3
+    dw 6, 5
+    dw 6, 7
+    dw 3, 2
+    dw 3, 4
+    dw 7, 2
+    dw 7, 8
+    dw 5, 4
+    dw 5, 8
+obj2Init dw 30*3 DUP(0)
+    
+object3 dw 6
+    dw 1111h
+    dw -5, 0, 0       ; Origin point
+    dw 5, 0, 0
+    dw 0, -5, 0
+    dw 0, 5, 0
+    dw 0, 0, -5
+    dw 0, 0, 5
+    
+    dw 3
+    
+    dw 1, 2
+    dw 3, 4
+    dw 5, 6
+obj3Init dw 30*3 DUP(0)    
 
 start:
+    
+mov ax, @data
+mov es, ax
+mov ds, ax
 
 mov ah, 0
 mov al, 13h
 int 10h
 
-call initBuffer
-call initTranslateCache
+lea di, objects
+mov cx, objLen
+storeObj:
+
+mov si, [di]
+call storeInitialPoints
+add di, 2
+
+loop storeObj
 
 drawScreen:
 
+lea di, objects
+mov cx, objLen
+drawObj:
+push cx
+
+mov si, [di]
+mov cx, [si][2]
+mov color, cl
 call drawGeometry
+add di, 2
+
+pop cx
+loop drawObj
+
 call pushBuffer
 
 getInput:
@@ -109,20 +161,40 @@ je exit
 
 jmp getInput
 
-drawGeometry proc
+objEdgePtToAddr proc    ; di: address of connection point
+    mov bx, [di]        ; si: address of 1st obj point
+    shl bx, 1   ; Multiply bx by 3
+    add bx, [di]
+    sub bx, 3   ; sub by 3 for 1-based indexing of points
+    shl bx, 1   ; Multiply by 2(bytes)
+    add bx, si
     
-    mov di, 0
-    mov cx, connLen
+    ret                 ; bx: address of point to project
+objEdgePtToAddr endp
+
+drawGeometry proc   ; load address of object into si
+    push di
+    
+    mov di, [si]    ; multiply length of object by 6
+    shl di, 1       ; since (x,y,z) => 3(words)*2(bytes)
+    add di, [si]
+    shl di, 1
+    
+    add si, 4
+    add di, si
+    mov cx, [di]
+    add di, 2
+    
     drawEdges:
     
-    mov bx, connections[di]
+    call objEdgePtToAddr
     call calcProj
     mov startXPos, ax
     mov startYPos, bx
     
     add di, 2
     
-    mov bx, connections[di]
+    call objEdgePtToAddr
     call calcProj
     mov endXPos, ax
     mov endYPos, bx
@@ -132,7 +204,8 @@ drawGeometry proc
     call drawLine
     
     loop drawEdges
-
+    
+    pop di
     ret
 drawGeometry endp
 
@@ -155,6 +228,17 @@ detectInput proc
     jne noExit 
     mov exitFlag, 1
     noExit:
+    
+    cmp al, 'r'
+    jne noReset
+    mov xTrans, 0
+    mov yTrans, 0
+    mov zTrans, 0
+    mov xAngle, 0
+    mov yAngle, 0
+    mov zAngle, 0
+    jmp endOfDetect
+    noReset:
     
     cmp al, 'q'
     jne noDecZAngle
@@ -207,39 +291,50 @@ detectInput proc
     jmp invalidInput
     
     zoomIn:
-    dec dx
+    dec zTrans
     jmp endOfDetect
     
     zoomOut:
-    inc dx
+    inc zTrans
     jmp endOfDetect
     
     upInput:
-    inc bx
+    inc yTrans
     jmp endOfDetect
     
     downInput:
-    dec bx
+    dec yTrans
     jmp endOfDetect
     
     leftInput:
-    dec cx
+    dec xTrans
     jmp endOfDetect
     
     rightInput:
-    inc cx
+    inc xTrans
     jmp endOfDetect
     
     endOfDetect:
-    mov ax, cx
-    call changePoints       ; Calculate translation
-                            ; and store in pointTranslate
-    call writeTranslation   ; Write pointTranslate to position
-                            ; for rotation
-    call checkAngle    ; Change angle to -180 < x <= 180
-    call rotateX       ; Apply rotation
+    
+    call checkAngle     ; Change angle to -180 < x <= 180
+    
+    lea si, objects
+    mov cx, objLen
+    applyTransform:
+    push cx
+    
+    mov di, [si]
+    call writeInitial   ; Write initalPoints to position
+                        ; for rotation
+    call rotateX        ; Apply rotation
     call rotateY
     call rotateZ
+    
+    call changePoints   ; Calculate translation
+                        ; and store in initalPoints    
+    pop cx
+    add si, 2
+    loop applyTransform
     
     stc
     
@@ -257,31 +352,33 @@ detectInput proc
     ret
 detectInput endp
 
-writeTranslation proc
+writeInitial proc   ; di is input of object to copy points
     push si
     push di
-    push ds
-    push es
     
-    mov ax, @data
-    mov es, ax
-    mov ds, ax
+    mov cx, [di]    ; multiply length of object by 3
+    shl cx, 1       ; since (x,y,z) => 3 words
+    add cx, [di]
     
-    lea di, point1
-    lea si, pointTranslate
-    
-    mov cx, pointsLen   ; multiple pointsLen by 3
+    push cx
     shl cx, 1
-    add cx, pointsLen
+    mov si, cx
+    pop cx
+    
+    add di, 4
+    
+    add si, di
+    mov ax, [si]
+    shl ax, 2   ; multiply ax by 4
+    add si, ax
+    add si, 2
     
     rep movsw
     
-    pop es
-    pop ds
     pop di
     pop si
     ret
-writeTranslation endp
+writeInitial endp
 
 checkAngle proc
     
@@ -319,26 +416,26 @@ checkAngle proc
 checkAngle endp
 
 ; vvvvv ===== Axis Rotation Code ===== vvvvv
-rotateX proc        ; dx is angle to rotate
-    push di
+rotateX proc    ; dx is angle to rotate
+    push di     ; di is address of obj to rotate
     push si
     
     mov dx, xAngle
     
     call getRotateBitMask
         
-    mov cx, pointsLen
-    mov di, 0
+    mov cx, [di]
+    add di, 4
 
     rotateAroundX:
     
-    mov ax, point1[di][4]
-    mov bx, point1[di][2]
+    mov ax, [di][4]
+    mov bx, [di][2]
     
     call applyRotate
     
-    mov point1[di][4], ax
-    mov point1[di][2], bx
+    mov [di][4], ax
+    mov [di][2], bx
     
     add di, 6
     
@@ -357,18 +454,18 @@ rotateY proc        ; dx is angle to rotate
     
     call getRotateBitMask
         
-    mov cx, pointsLen
-    mov di, 0
+    mov cx, [di]
+    add di, 4
 
     rotateAroundY:
     
-    mov ax, point1[di][4]
-    mov bx, point1[di]
+    mov ax, [di][4]
+    mov bx, [di]
     
     call applyRotate
     
-    mov point1[di][4], ax
-    mov point1[di], bx
+    mov [di][4], ax
+    mov [di], bx
     
     add di, 6
     
@@ -387,18 +484,18 @@ rotateZ proc        ; dx is angle to rotate
     
     call getRotateBitMask
         
-    mov cx, pointsLen
-    mov di, 0
+    mov cx, [di]
+    add di, 4
 
     rotateAroundZ:
     
-    mov ax, point1[di]
-    mov bx, point1[di][2]
+    mov ax, [di]
+    mov bx, [di][2]
     
     call applyRotate
     
-    mov point1[di], ax
-    mov point1[di][2], bx
+    mov [di], ax
+    mov [di][2], bx
     
     add di, 6
     
@@ -485,6 +582,9 @@ applyRotate proc    ; ax: first coord, bx: second coord
     neg ax
     
     noXFlip:
+    
+    cmp dx, 0
+    je noRevertXFlip
           
     mov cl, 0
     
@@ -564,28 +664,33 @@ applyRotate endp
 
 ; vvvvv ===== Translation Code ===== vvvvv
 changePoints proc   ; ax: change in x, bx: change in y
-    push di         ; dx: change in z
+    push di         ; dx: change in z, di: object to translate
     
-    mov cx, pointsLen
-    mov di, 0
+    mov cx, [di]
+    add di, 4
     
     changePointLoop:
+    push cx
     
-    add pointTranslate[di], ax
+    mov cx, xTrans
+    add [di], cx
+    add di, 2
+        
+    mov cx, yTrans
+    add [di], cx
+    add di, 2
+        
+    mov cx, zTrans
+    add [di], cx
     add di, 2
     
-    add pointTranslate[di], bx
-    add di, 2
-    
-    add pointTranslate[di], dx
-    add di, 2
-    
+    pop cx
     loop changePointLoop
     
     pop di
     ret
 changePoints endp
-; ^^^^^ ===== X, Y, Z Translation Code ===== ^^^^^
+; ^^^^^ ===== Translation Code ===== ^^^^^
 
 ; vvvvv ===== Point projection code ===== vvvvv
 calcProj proc       ; Move address of point into BX
@@ -598,7 +703,7 @@ calcProj proc       ; Move address of point into BX
     mov dx, [bx][1*2]     ; y-coord of point
     mov cx, [bx][2*2]     ; z-coord of point
     
-    add cx, focal
+    add cx, zTrans
     jns inFrontOfCam
     
     mov cx, 4
@@ -775,6 +880,7 @@ pushBuffer proc
     
     cld
     
+    ; Push buffer
     mov ax, 09000h
     mov ds, ax
     
@@ -787,17 +893,16 @@ pushBuffer proc
     mov cx, 07D00h
     rep movsw
     
-    mov ax, 08000h
-    mov ds, ax
-    
+    ; Clear buffer
     mov ax, 09000h
     mov es, ax
     
-    mov si, 0
+    mov ax, 0
+    
     mov di, 0
     
     mov cx, 07D00h
-    rep movsw
+    rep stosw
     
     pop cx
     pop es
@@ -811,6 +916,7 @@ writeToBuffer proc
     push ax
     push bx
     push dx
+    push es
     
     mov ax, 09000h
     mov es, ax
@@ -825,68 +931,43 @@ writeToBuffer proc
     mov al, color
     mov es:bx, al
     
+    pop es
     pop dx
     pop bx
     pop ax
     ret
 writeToBuffer endp
-
-initBuffer proc
-    push di
-    push si
-    push ds
-    push es
-    push cx
-    
-    cld
-    
-    mov ax, 09000h
-    mov es, ax
-    
-    mov ax, 0
-    
-    mov di, 0
-    
-    mov cx, 07D00h
-    rep stosw
-    
-    call pushBuffer
-    call pushBuffer
-    
-    pop cx
-    pop es
-    pop ds
-    pop si
-    pop di
-    ret
-initBuffer endp
 ; ^^^^^ ===== Single buffer code ===== ^^^^^
 
-initTranslateCache proc
+storeInitialPoints proc     ; si: address of object as input
     push si
     push di
-    push ds
-    push es
+    push cx
     
-    mov ax, @data
-    mov es, ax
-    mov ds, ax
+    mov cx, [si]    ; multiply length of object by 3
+    shl cx, 1       ; since (x,y,z) => 3 words
+    add cx, [si]
     
-    lea si, point1
-    lea di, pointTranslate
-    
-    mov cx, pointsLen   ; multiple pointsLen by 3
+    push cx
     shl cx, 1
-    add cx, pointsLen
+    mov di, cx
+    pop cx
+    
+    add si, 4
+    
+    add di, si
+    mov ax, [di]
+    shl ax, 2   ; multiply ax by 4
+    add di, ax
+    add di, 2
     
     rep movsw
     
-    pop es
-    pop ds
+    pop cx
     pop di
     pop si
     ret
-initTranslateCache endp
+storeInitialPoints endp
 
 exit:
 
