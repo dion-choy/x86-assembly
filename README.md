@@ -189,6 +189,12 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
 
 -   Wireframe objects(s)
 -   Input detection to move object(s)
+    -   Up/down arrow -> Up/down
+    -   Left/right arrow -> Left/right
+    -   'i'/'o' -> Front/back
+    -   'q'/'e' -> -/+ Roll
+    -   'w'/'s' -> -/+ Pitch
+    -   'a'/'d' -> +/- Yaw
 
 **_Program_**
 
