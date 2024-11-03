@@ -208,11 +208,38 @@ drawGeometry proc   ; load address of object into si
     ret
 drawGeometry endp
 
+applyTrans proc
+    
+    call checkAngle     ; Change angle to -180 < x <= 180
+    
+    lea si, objects
+    mov cx, objLen
+    applyTransform:
+    push cx
+    
+    mov di, [si]
+    call writeInitial   ; Write initalPoints to position
+                        ; for rotation
+    call rotateX        ; Apply rotation
+    call rotateY
+    call rotateZ
+    
+    call changePoints   ; Calculate translation
+                        ; and store in initalPoints    
+    pop cx
+    add si, 2
+    loop applyTransform
+    
+    ret
+applyTrans endp
+
 detectInput proc
     
     mov bx, 0
     mov cx, 0
     mov dx, 0
+    
+    clc
     
     mov ah, 1           ; get input from buffer
     int 16h    
@@ -311,25 +338,7 @@ detectInput proc
     
     endOfDetect:
     
-    call checkAngle     ; Change angle to -180 < x <= 180
-    
-    lea si, objects
-    mov cx, objLen
-    applyTransform:
-    push cx
-    
-    mov di, [si]
-    call writeInitial   ; Write initalPoints to position
-                        ; for rotation
-    call rotateX        ; Apply rotation
-    call rotateY
-    call rotateZ
-    
-    call changePoints   ; Calculate translation
-                        ; and store in initalPoints    
-    pop cx
-    add si, 2
-    loop applyTransform
+    call applyTrans
     
     stc
     
