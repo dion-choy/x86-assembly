@@ -16,7 +16,6 @@ angleLookup db 45, 26, 14, 7, 3, 2, 1
 exitFlag db 0
 color db 1110b
 
-
 ; vvvv variables for line drawing
 startXPos dw 0
 startYPos dw 0
@@ -210,10 +209,6 @@ drawGeometry proc   ; load address of object into si
 drawGeometry endp
 
 detectInput proc
-    push ax
-    push bx
-    push cx
-    push dx
     
     mov bx, 0
     mov cx, 0
@@ -345,10 +340,6 @@ detectInput proc
     
     noInput:
     
-    pop dx
-    pop cx
-    pop bx
-    pop ax
     ret
 detectInput endp
 
@@ -507,9 +498,7 @@ rotateZ proc        ; dx is angle to rotate
 rotateZ endp
 
 getRotateBitMask proc   ; dx: angle to rotate (deg)
-    push ax         ; CORDIC algorithm
-    push bx
-    push cx
+    push cx         ; CORDIC algorithm
     push dx
     push di
     
@@ -557,8 +546,6 @@ getRotateBitMask proc   ; dx: angle to rotate (deg)
     pop di
     pop dx
     pop cx
-    pop bx
-    pop ax
     ret
 getRotateBitMask endp
 
@@ -694,16 +681,14 @@ changePoints endp
 
 ; vvvvv ===== Point projection code ===== vvvvv
 calcProj proc       ; Move address of point into BX
-    ; Xproj = x*focal/(z+focal)
-    ; Yproj = y*focal/(z+focal)
-    push cx
-    push dx
+    push cx     ; Xproj = x*focal/(z+focal)
+    push dx     ; Yproj = y*focal/(z+focal)
     
     mov ax, [bx][0]     ; x-coord of point
     mov dx, [bx][1*2]     ; y-coord of point
     mov cx, [bx][2*2]     ; z-coord of point
     
-    add cx, zTrans
+    add cx, focal
     jns inFrontOfCam
     
     mov cx, 4
@@ -741,7 +726,6 @@ calcProj endp   ; return y-coord at BX
 
 ; vvvvv ===== Line drawing code ===== vvvvv
 drawLine proc       ; Bresenham's line algorithm 
-    
     push ax
     push bx
     push cx
@@ -913,10 +897,10 @@ pushBuffer proc
 pushBuffer endp
 
 writeToBuffer proc
-    push ax
     push bx
     push dx
     push es
+    push ax
     
     mov ax, 09000h
     mov es, ax
@@ -928,19 +912,17 @@ writeToBuffer proc
     
     add bx, cx
     
-    mov al, color
+    pop ax
     mov es:bx, al
     
     pop es
     pop dx
     pop bx
-    pop ax
     ret
 writeToBuffer endp
 ; ^^^^^ ===== Single buffer code ===== ^^^^^
 
 storeInitialPoints proc     ; si: address of object as input
-    push si
     push di
     push cx
     
@@ -965,7 +947,6 @@ storeInitialPoints proc     ; si: address of object as input
     
     pop cx
     pop di
-    pop si
     ret
 storeInitialPoints endp
 
