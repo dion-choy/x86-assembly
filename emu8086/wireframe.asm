@@ -621,6 +621,13 @@ applyRotate proc    ; ax: first coord, bx: second coord
     mov cx, 100
     idiv cx
     
+    cmp dx, 100
+    jl noCarryAx
+    
+    inc ax
+    
+    noCarryAx:
+    
     xchg ax, bx ; swap ax and bx
     
     mov cx, 61  ; multiply ax by 6/10
@@ -628,6 +635,13 @@ applyRotate proc    ; ax: first coord, bx: second coord
     
     mov cx, 100
     idiv cx
+    
+    cmp dx, 100
+    jl noCarryBx
+    
+    inc ax
+    
+    noCarryBx:
     
     xchg ax, bx
     
