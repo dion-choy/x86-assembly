@@ -621,28 +621,12 @@ applyRotate proc    ; ax: first coord, bx: second coord
     mov cx, 100
     idiv cx
     
-    cmp dx, 100
-    jl noCarryAx
-    
-    inc ax
-    
-    noCarryAx:
-    
     xchg ax, bx ; swap ax and bx
-    
     mov cx, 61  ; multiply ax by 6/10
     imul cx
     
     mov cx, 100
     idiv cx
-    
-    cmp dx, 100
-    jl noCarryBx
-    
-    inc ax
-    
-    noCarryBx:
-    
     xchg ax, bx
     
     pop dx
@@ -777,7 +761,6 @@ drawLine proc       ; Bresenham's line algorithm
     
     doNotInvertX:
     
-    
     mov ax, endYPos     ; ax: deltaY
     sub ax, startYPos   
     
@@ -794,11 +777,9 @@ drawLine proc       ; Bresenham's line algorithm
     mov bx, ax          ; bx: error
     add bx, cx
     
-    
     drawNextPx:
     
     call drawPx
-    
     
     mov dx, endXPos
     cmp cursorXPos, dx
