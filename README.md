@@ -18,6 +18,7 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
 -   [minesweeper.asm](#minesweeperasm)
 -   [flappyBird.asm](#flappybirdasm)
 -   [qrcode.asm](#qrcodeasm)
+-   [wireframe.asm](#wireframeasm)
 
 ## Brief Overview
 
