@@ -27,6 +27,8 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
 -   Simple 3x3 multiplier
 -   Places output at DS:0200h
 
+---
+
 #### sqrt.asm
 
 -   Low Precision Square Root calculator
@@ -37,6 +39,8 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
 **_Program_**
 
 -   Uses Newton-Raphson method to approximate the root of following function, $f(x)=  x^2 - input$
+
+---
 
 #### snakeGame.asm
 
@@ -61,6 +65,8 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
 
     -   Uses system time to generate coordinates for apple
 
+---
+
 #### ticTacToe.asm
 
 -   2 Player Tic Tac Toe Game
@@ -75,6 +81,8 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
 
 -   Loops through rows and columns to check for 3 in a row
 -   Manually checks diagonals
+
+---
 
 #### pong.asm
 
@@ -100,6 +108,8 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
 -   Collision detection
 
     -   Compare height of ball with height of paddles
+
+---
 
 #### minesweeper.asm
 
@@ -142,6 +152,8 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
     -   Checks from top row to bottom row
     -   If any neighbouring tile is '0', call procedure again
 
+---
+
 #### flappyBird.asm
 
 -   Flappy Bird
@@ -168,6 +180,8 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
     -   Change velocity to upwards 3 char/frame
     -   Gravity makes a smoother arc
 
+---
+
 #### qrcode.asm
 
 -   QR Code Generator
@@ -185,6 +199,8 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
 
 -   Masks 0-7 implemented
     -   If mask not inputted, randomly chosen
+
+---
 
 #### wireframe.asm
 
@@ -244,3 +260,5 @@ Tested on x86 emulator: [DOSBox](https://www.dosbox.com/)
             -   Using a series of angles, $\theta$, where $tan(\theta)=\frac{1}{2^n}$, the angle can be approximated using right shifts to divide by 2
             -   Only works for $0\degree \le \theta \le 90\degree$
             -   Trigonometry to extend to full $360\degree$
+
+---
