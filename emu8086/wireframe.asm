@@ -220,12 +220,15 @@ applyTrans proc
     mov di, [si]
     call writeInitial   ; Write initalPoints to position
                         ; for rotation
-    call rotateX        ; Apply rotation
-    call rotateY
-    call rotateZ
     
     call changePoints   ; Calculate translation
                         ; and store in initalPoints    
+    
+    call rotateX        ; Apply rotation
+    call rotateY
+    call rotateZ
+    call denormalizeOrigin
+    
     pop cx
     add si, 2
     loop applyTransform
@@ -656,6 +659,27 @@ applyRotate endp
 ; ^^^^^ ===== Axis Rotation Code ===== ^^^^^
 
 ; vvvvv ===== Translation Code ===== vvvvv
+denormalizeOrigin proc
+    push di
+    
+    mov cx, [di]
+    add di, 4
+    
+    denormalizeOriginLoop:
+    push cx
+    add di, 4
+        
+    mov cx, focal
+    sub [di], cx
+    add di, 2
+    
+    pop cx
+    loop denormalizeOriginLoop
+    
+    pop di
+    ret
+denormalizeOrigin endp
+
 changePoints proc   ; ax: change in x, bx: change in y
     push di         ; dx: change in z, di: object to translate
     
@@ -674,6 +698,7 @@ changePoints proc   ; ax: change in x, bx: change in y
     add di, 2
         
     mov cx, zTrans
+    add cx, focal
     add [di], cx
     add di, 2
     
