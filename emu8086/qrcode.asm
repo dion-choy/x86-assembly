@@ -436,7 +436,7 @@ mask1 proc      ; y%2=0
     push dx
              
     and dh, 0001b
-    cmp al, 0
+    cmp dh, 0
     
     pop dx
     ret
